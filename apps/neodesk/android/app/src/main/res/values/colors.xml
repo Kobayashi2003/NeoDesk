@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#FF0071FF</color>
+    <!-- ic_launcher_background is defined in ic_launcher_background.xml (vendored);
+         do not duplicate it here (flutter_launcher_icons adds it — remove after running). -->
+</resources>

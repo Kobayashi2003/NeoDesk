@@ -1,0 +1,131 @@
+import com.google.protobuf.gradle.*
+import groovy.json.JsonSlurper
+
+plugins {
+    id "com.google.protobuf" version "0.9.4"
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+// rustls-platform-verifier Android support.
+// neodesk vendors the maven repo (copied from the rustls-platform-verifier-android
+// crate) under android/app/rustls-maven, so the build no longer needs the RustDesk
+// Cargo workspace / `cargo metadata` to locate it.
+repositories {
+    maven {
+        url = uri("${projectDir}/rustls-maven")
+        metadataSources.artifact()
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.20.1'
+    }
+
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.builtins {
+                java {
+                    option "lite"
+                }
+            }
+        }
+    }
+}
+
+android {
+    compileSdkVersion 34
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+
+        main.proto.srcDirs += 'protos'
+        main.proto.includes += "message.proto"
+    }
+
+    compileOptions {
+        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        // neodesk uses its own applicationId so it installs alongside the official
+        // RustDesk app without a signature/package clash. The Java/JNI namespace
+        // stays "com.carriez.flutter_hbb" (see AndroidManifest package=) because the
+        // prebuilt librustdesk.so registers its native methods against those class
+        // names — only the on-device applicationId changes.
+        applicationId "com.neodesk.remote"
+        minSdkVersion 22
+        targetSdkVersion 33
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        // neodesk ships for arm64 phones only. The vendored librustdesk.so exists
+        // for both arm64 and x86_64 (~35 MB), but x86_64 would only be needed by
+        // an emulator — exclude it so the APK doesn't carry an unused engine copy.
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    signingConfigs {
+      release {
+        keyAlias keystoreProperties['keyAlias']
+        keyPassword keystoreProperties['keyPassword']
+        storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+        storePassword keystoreProperties['storePassword']
+      }
+    }
+
+    buildTypes {
+        release {
+            // Sign with the real release key when key.properties is present;
+            // otherwise fall back to the debug key so a release build still works
+            // out of the box (fine for personal sideloading). Add key.properties +
+            // a keystore for a properly-signed release.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            // R8: strip + shrink unused Java/Kotlin (the prebuilt engine's JNI is
+            // kept by proguard-rules). Big size win for a real release build.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules'
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation 'com.google.protobuf:protobuf-javalite:3.20.1'
+    implementation "androidx.media:media:1.6.0"
+    implementation 'com.github.getActivity:XXPermissions:18.5'
+    implementation("org.jetbrains.kotlin:kotlin-stdlib") { version { strictly("1.9.10") } }
+    implementation 'com.caverock:androidsvg-aar:1.4'
+    implementation "rustls:rustls-platform-verifier:0.1.1"
+}

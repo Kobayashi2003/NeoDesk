@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Spotify-dark rounded tile -->
+  <rect width="1024" height="1024" rx="220" fill="#121212"/>
+  <!-- remote-desktop screen motif (RustDesk-ish), faint green -->
+  <rect x="226" y="298" width="572" height="404" rx="52" fill="none"
+        stroke="#1ED760" stroke-width="22" opacity="0.22"/>
+  <rect x="430" y="724" width="164" height="26" rx="13" fill="#1ED760" opacity="0.22"/>
+  <!-- bold "N" in Spotify green -->
+  <path d="M360,704 L360,320 L664,704 L664,320" fill="none" stroke="#1ED760"
+        stroke-width="88" stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>
