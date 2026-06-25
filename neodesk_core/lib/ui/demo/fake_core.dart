@@ -51,6 +51,11 @@ class FakeCore implements NeodeskCore {
   Future<void> openExternalUrl(String url) async {}
 
   @override
+  Future<bool> downloadAndInstall(String url,
+          {void Function(double)? onProgress}) async =>
+      false;
+
+  @override
   Future<void> setVolumeKeyIntercept(
       {required bool up, required bool down}) async {}
 

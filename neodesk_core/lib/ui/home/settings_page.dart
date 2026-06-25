@@ -209,13 +209,48 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              widget.core.openExternalUrl(info.url);
+              _downloadUpdate(info);
             },
-            child: const Text('Download'),
+            child: const Text('Update'),
           ),
         ],
       ),
     );
+  }
+
+  /// Download the APK with a progress dialog, then hand it to the system
+  /// installer. Falls back to opening the release in the browser on failure.
+  Future<void> _downloadUpdate(UpdateInfo info) async {
+    final progress = ValueNotifier<double>(0);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Downloading update…'),
+        content: ValueListenableBuilder<double>(
+          valueListenable: progress,
+          builder: (_, p, __) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(value: p > 0 ? p : null),
+              const SizedBox(height: Dimens.s12),
+              Text('${(p * 100).toStringAsFixed(0)}%'),
+            ],
+          ),
+        ),
+      ),
+    );
+    final ok = await widget.core
+        .downloadAndInstall(info.url, onProgress: (p) => progress.value = p);
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop(); // close progress dialog
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Download failed — opening in browser')));
+        widget.core.openExternalUrl(info.url);
+      }
+    }
+    progress.dispose();
   }
 
   @override

@@ -43,6 +43,12 @@ abstract interface class NeodeskCore {
   /// Open [url] in the system browser (e.g. a release download). No-op in demo.
   Future<void> openExternalUrl(String url);
 
+  /// Download the APK at [url] and launch the system installer, reporting
+  /// download progress (0.0–1.0) via [onProgress]. Returns false if it couldn't
+  /// download or start the installer — the caller can then fall back to
+  /// [openExternalUrl]. No-op/false off Android / in demo.
+  Future<bool> downloadAndInstall(String url, {void Function(double)? onProgress});
+
   /// Ask the platform to intercept the volume Up/Down keys (so they don't change
   /// system volume) and report presses via [volumeKeyEvents]. Pass false/false to
   /// stop. No-op off Android / in demo. Intercepting natively (not via Flutter's

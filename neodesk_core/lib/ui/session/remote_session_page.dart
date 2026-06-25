@@ -151,7 +151,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   void _onPhase(SessionPhase p) {
     if (p == SessionPhase.connected) {
       _c.flashChrome();
-    } else if (p == SessionPhase.closed && !_popped) {
+    } else if (p == SessionPhase.closed && !_c.reconnecting && !_popped) {
       _popped = true;
       // Use pop(), not maybePop(): the PopScope(canPop: false) below blocks
       // maybePop() (it re-invokes _close instead), which left the page stuck on
@@ -197,6 +197,11 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   }
 
   Widget _bodyForPhase() {
+    // Auto-reconnecting after a drop: show a retry view (with Cancel to bail out)
+    // regardless of the raw phase, instead of "Connecting"/"Disconnected".
+    if (_c.reconnecting) {
+      return _loading('Reconnecting… (attempt ${_c.reconnectAttempt})');
+    }
     switch (_c.phase) {
       case SessionPhase.idle:
       case SessionPhase.connecting:

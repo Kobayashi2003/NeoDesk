@@ -20,7 +20,7 @@ preferences.
 
 ## Download
 
-Grab the latest `neodesk-debug-*.apk` from the
+Grab the latest `neodesk-*.apk` from the
 [Releases](https://github.com/Kobayashi2003/NeoDesk/releases) page and install it
 on an arm64 Android device.
 
@@ -42,22 +42,12 @@ cd rustdesk
 flutter build apk --release --target-platform android-arm64
 ```
 
-Behind a proxy, set `$env:NEODESK_PROXY` (e.g. `http://127.0.0.1:7890`) before
-running the script. See [`scripts/README.md`](scripts/README.md) for details.
+## What I wrote
 
-## What I wrote vs. what's from RustDesk
-
-**Mine:**
-
-- `neodesk_core/` — the entire redesigned UI plus a clean port/interface layer
-  (it even runs as a standalone demo with no engine).
-- `rustdesk/lib/neodesk/` — the adapter + launcher that bind that UI to the
-  engine.
-
-**From RustDesk (vendored, used unchanged as the backend):** everything else
-under `rustdesk/` — RustDesk's Flutter client (`models/`, `mobile/`,
-`common.dart`, …), its assets, and the prebuilt native engine
-`librustdesk.so` (RustDesk 1.4.7).
+The entire redesigned UI and gesture/interaction system (`neodesk_core/`, which
+even runs as a standalone demo with no engine), plus a thin adapter and launcher
+(`rustdesk/lib/neodesk/`) that bind it to RustDesk's engine. Everything else is
+RustDesk's vendored client and prebuilt engine.
 
 ## Thanks
 

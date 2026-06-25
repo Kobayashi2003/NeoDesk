@@ -47,8 +47,18 @@ class SessionController extends ChangeNotifier {
         _frameSub ??= frameSource.onFrame.listen((_) => _ensureCursorCentered());
       }
       if (p == SessionPhase.connected) {
+        _everConnected = true;
+        reconnecting = false;
+        reconnectAttempt = 0;
         _ensureCursorCentered();
         _loadSessionToggles();
+      }
+      // An unexpected drop after we'd connected → auto-reconnect (vs. a
+      // user-initiated close, or a never-connected initial failure).
+      if ((p == SessionPhase.closed || p == SessionPhase.error) &&
+          !_userClosing &&
+          _everConnected) {
+        _scheduleReconnect();
       }
       notifyListeners();
     });
@@ -134,6 +144,17 @@ class SessionController extends ChangeNotifier {
   /// Whether the cursor has been centred for the current connection (once it is,
   /// we stop re-centring on every frame).
   bool _cursorCentered = false;
+
+  /// Auto-reconnect state. [reconnecting] is true while retrying after an
+  /// unexpected drop; [reconnectAttempt] is the current attempt (1.._maxReconnect).
+  /// We only retry once a connection has actually succeeded ([_everConnected]),
+  /// and never after a user-initiated close ([_userClosing]).
+  bool reconnecting = false;
+  int reconnectAttempt = 0;
+  bool _everConnected = false;
+  bool _userClosing = false;
+  static const _maxReconnect = 5;
+  Timer? _reconnectTimer;
 
   /// True while the app is in picture-in-picture (small window) — the page hides
   /// its chrome and the floating handle so only the remote shows.
@@ -617,11 +638,40 @@ class SessionController extends ChangeNotifier {
   Future<void> changeResolution(int w, int h) =>
       session.changeResolution(w, h);
 
-  Future<void> disconnect() => session.close();
+  /// Retry the connection after an unexpected drop, with a short capped backoff,
+  /// up to [_maxReconnect] times. After that, give up (the page then closes).
+  void _scheduleReconnect() {
+    if (reconnectAttempt >= _maxReconnect) {
+      reconnecting = false; // exhausted — let the page close
+      return;
+    }
+    reconnecting = true;
+    reconnectAttempt++;
+    final secs = math.min(reconnectAttempt * 2, 10);
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(Duration(seconds: secs), () {
+      if (_disposed || _userClosing) return;
+      session.connect(id: peerId);
+    });
+  }
+
+  void _cancelReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    reconnecting = false;
+    reconnectAttempt = 0;
+  }
+
+  Future<void> disconnect() {
+    _userClosing = true; // suppress auto-reconnect for a deliberate close
+    _cancelReconnect();
+    return session.close();
+  }
 
   @override
   void dispose() {
     _disposed = true;
+    _reconnectTimer?.cancel();
     _chromeTimer?.cancel();
     _edgePanTimer?.cancel();
     _phaseSub?.cancel();

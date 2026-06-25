@@ -28,7 +28,10 @@ import android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlan
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.util.DisplayMetrics
+import android.net.Uri
 import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 import com.hjq.permissions.XXPermissions
@@ -97,6 +100,16 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+        // In-app update: launch the system package installer on a downloaded APK.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "neodesk/installapk")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "install") {
+                    val path = call.argument<String>("path")
+                    result.success(if (path != null) installApk(path) else false)
+                } else {
+                    result.notImplemented()
+                }
+            }
         thread {
             try {
                 setCodecInfo()
@@ -140,6 +153,24 @@ class MainActivity : FlutterActivity() {
             return true
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    // Launch the system package installer on a downloaded APK (via a FileProvider
+    // content:// URI). The user is prompted to allow "install unknown apps" the
+    // first time. Returns false if the intent couldn't be started.
+    private fun installApk(path: String): Boolean {
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", File(path))
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Log.e("MainActivity", "installApk failed: ${e.message}", e)
+            false
+        }
     }
 
     private fun requestMediaProjection() {

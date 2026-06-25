@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert' show jsonDecode;
-import 'dart:io' show Socket;
+import 'dart:io' show File, Socket;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show MethodChannel;
@@ -17,6 +17,7 @@ import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:neodesk_core/neodesk_core.dart' as nd;
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'scan_page.dart';
@@ -141,6 +142,34 @@ class RustdeskCore implements nd.NeodeskCore {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  static const _installChannel = MethodChannel('neodesk/installapk');
+
+  @override
+  Future<bool> downloadAndInstall(String url,
+      {void Function(double)? onProgress}) async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/neodesk-update.apk');
+      final resp = await http.Client().send(http.Request('GET', Uri.parse(url)));
+      if (resp.statusCode != 200) return false;
+      final total = resp.contentLength ?? 0;
+      final sink = file.openWrite();
+      var received = 0;
+      await for (final chunk in resp.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (total > 0) onProgress?.call(received / total);
+      }
+      await sink.close();
+      // Native side resolves a FileProvider URI and launches the package installer.
+      final ok = await _installChannel
+          .invokeMethod<bool>('install', {'path': file.path});
+      return ok ?? false;
+    } catch (_) {
+      return false;
     }
   }
 
