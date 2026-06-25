@@ -46,6 +46,12 @@ class _SettingsPageState extends State<SettingsPage> {
     (label: 'Medium', value: 'medium', sub: null),
     (label: 'Large', value: 'large', sub: null),
   ];
+  // Engine dialog language (the neodesk UI itself stays English).
+  static const _languages = <_Option>[
+    (label: 'Follow system', value: 'system', sub: null),
+    (label: 'English', value: 'en', sub: null),
+    (label: '中文', value: 'zh-cn', sub: 'Engine dialogs only'),
+  ];
   // Per-volume-key actions. A quick press taps; holding holds (scroll repeats).
   static const _volumeActions = <_Option>[
     (label: 'System volume', value: 'off', sub: 'Default — changes volume'),
@@ -82,6 +88,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _keyCompact;
   late String _volumeUp;
   late String _volumeDown;
+  late String _language;
+  late bool _appLock;
 
   /// Which slider row is currently expanded (accordion; null = all collapsed).
   /// Sliders are hidden behind a tap so the list stays compact.
@@ -108,6 +116,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _keyCompact = _cfg.getBool(ConfigKeys.keyCompact);
     _volumeUp = _cfg.get(ConfigKeys.volumeUp, defaultValue: 'off');
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
+    _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
+    _appLock = _cfg.getBool(ConfigKeys.appLock);
   }
 
   static const _opacityMin = 0.55, _opacityMax = 1.0;
@@ -263,6 +273,32 @@ class _SettingsPageState extends State<SettingsPage> {
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
             child: Text('Settings', style: AppTypography.display),
           ),
+          _group('General'),
+          _row(Icons.language, 'Language',
+              value: _labelOf(_languages, _language),
+              onTap: () => _pickOption('Language', _languages,
+                  ConfigKeys.language, _language, (v) {
+                setState(() => _language = v);
+                widget.core.setLanguage(v); // applies to engine dialogs going forward
+              })),
+          _switchRow(Icons.lock_outline, 'App lock (require unlock)', _appLock,
+              (v) async {
+            final messenger = ScaffoldMessenger.of(context);
+            if (v) {
+              // Confirm a device credential exists / the user can authenticate
+              // before turning the lock on, so they can't lock themselves out.
+              final ok = await widget.core.authenticateAppLock();
+              if (!ok) {
+                messenger.showSnackBar(const SnackBar(
+                    content: Text(
+                        'Set a device screen lock first (or authentication was cancelled)')));
+                return;
+              }
+            }
+            if (!mounted) return;
+            setState(() => _appLock = v);
+            _cfg.setBool(ConfigKeys.appLock, v);
+          }),
           _group('Interaction'),
           _row(Icons.touch_app, 'Default mode',
               value: _mode.label, onTap: _pickMode),

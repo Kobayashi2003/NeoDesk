@@ -6,6 +6,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:neodesk_core/neodesk_core.dart' show ConfigKeys;
+import 'package:neodesk_core/ui/home/app_lock_gate.dart';
 import 'package:neodesk_core/ui/home/home_shell.dart';
 import 'package:neodesk_core/ui/session/canvas_override.dart';
 import 'package:neodesk_core/ui/session/cursor_override.dart';
@@ -87,10 +89,12 @@ ThemeData neodeskAppTheme() {
 
 /// Must be called once before runApp (after engine init).
 void setupNeodesk() {
-  // neodesk's UI is English-only; force the engine's locale so its dialogs
-  // (password prompt, connection info, errors) are English too, not the phone's
-  // system language.
-  bind.mainSetLocalOption(key: kCommConfKeyLang, value: 'en');
+  // Engine dialog language (password prompt, connection info, errors). `system`
+  // follows the phone; otherwise a RustDesk code like `en` / `zh-cn`. (The
+  // neodesk UI itself stays English regardless.)
+  final lang = neodeskCore.config.get(ConfigKeys.language, defaultValue: 'system');
+  bind.mainSetLocalOption(
+      key: kCommConfKeyLang, value: lang == 'system' ? '' : lang);
   neodeskFrameOverride = (context) => const RustdeskFrameWidget();
   neodeskCanvasOverride = _RustdeskCanvasControl();
   neodeskCursorOverride = _RustdeskCursorControl();
@@ -162,7 +166,10 @@ class NeodeskEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return Theme(
       data: AppTheme.dark(),
-      child: HomeShell(core: neodeskCore),
+      child: AppLockGate(
+        core: neodeskCore,
+        child: HomeShell(core: neodeskCore),
+      ),
     );
   }
 }

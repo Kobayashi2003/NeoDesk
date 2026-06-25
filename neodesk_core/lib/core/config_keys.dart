@@ -56,4 +56,11 @@ abstract final class ConfigKeys {
   /// volume change); a quick press taps, holding holds (and scroll repeats).
   static const volumeUp = 'neodesk.volume.up';
   static const volumeDown = 'neodesk.volume.down';
+
+  /// Engine UI language for its dialogs (`system` follows the phone, else a
+  /// RustDesk code like `en` / `zh-cn`). The neodesk UI itself stays English.
+  static const language = 'neodesk.language';
+
+  /// Require a device unlock (biometric / PIN) to open the app (bool).
+  static const appLock = 'neodesk.applock';
 }

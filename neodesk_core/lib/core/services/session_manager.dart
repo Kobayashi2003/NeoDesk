@@ -49,6 +49,15 @@ abstract interface class NeodeskCore {
   /// [openExternalUrl]. No-op/false off Android / in demo.
   Future<bool> downloadAndInstall(String url, {void Function(double)? onProgress});
 
+  /// Set the engine's UI language for its dialogs (`system` follows the phone,
+  /// else a RustDesk code like `en` / `zh-cn`). No-op in demo.
+  Future<void> setLanguage(String lang);
+
+  /// Prompt the device unlock (biometric / PIN / pattern) for the app lock.
+  /// Returns true if confirmed; false if cancelled or no secure lock is set.
+  /// Returns true in demo (no lock).
+  Future<bool> authenticateAppLock();
+
   /// Ask the platform to intercept the volume Up/Down keys (so they don't change
   /// system volume) and report presses via [volumeKeyEvents]. Pass false/false to
   /// stop. No-op off Android / in demo. Intercepting natively (not via Flutter's

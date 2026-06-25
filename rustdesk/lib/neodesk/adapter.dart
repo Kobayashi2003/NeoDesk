@@ -25,7 +25,11 @@ import 'terminal_page.dart';
 
 import '../common.dart' show gFFI, isAndroid, AndroidPermissionManager;
 import '../consts.dart'
-    show kManageExternalStorage, kOptionCodecPreference, kAllDisplayValue;
+    show
+        kManageExternalStorage,
+        kOptionCodecPreference,
+        kAllDisplayValue,
+        kCommConfKeyLang;
 import '../models/file_model.dart'
     show FileController, SelectedItems, Entry, JobState, PathUtil;
 import '../models/input_model.dart' show MouseButtons, InputModel;
@@ -168,6 +172,21 @@ class RustdeskCore implements nd.NeodeskCore {
       final ok = await _installChannel
           .invokeMethod<bool>('install', {'path': file.path});
       return ok ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<void> setLanguage(String lang) => bind.mainSetLocalOption(
+      key: kCommConfKeyLang, value: lang == 'system' ? '' : lang);
+
+  static const _appLockChannel = MethodChannel('neodesk/applock');
+
+  @override
+  Future<bool> authenticateAppLock() async {
+    try {
+      return await _appLockChannel.invokeMethod<bool>('authenticate') ?? false;
     } catch (_) {
       return false;
     }

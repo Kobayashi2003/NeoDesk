@@ -14,6 +14,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.ClipboardManager
+import android.app.KeyguardManager
 import android.app.PictureInPictureParams
 import android.os.Bundle
 import android.os.Build
@@ -110,6 +111,15 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        // App lock: confirm the device credential (biometric / PIN / pattern).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "neodesk/applock")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "authenticate") {
+                    authenticateAppLock(result)
+                } else {
+                    result.notImplemented()
+                }
+            }
         thread {
             try {
                 setCodecInfo()
@@ -185,6 +195,28 @@ class MainActivity : FlutterActivity() {
         if (requestCode == REQ_INVOKE_PERMISSION_ACTIVITY_MEDIA_PROJECTION && resultCode == RES_FAILED) {
             flutterMethodChannel?.invokeMethod("on_media_projection_canceled", null)
         }
+        if (requestCode == reqAppLock) {
+            appLockResult?.success(resultCode == RESULT_OK)
+            appLockResult = null
+        }
+    }
+
+    // App lock: prompt the system credential confirmation (biometric / PIN /
+    // pattern). Returns false (via the channel) if the device has no secure lock
+    // set, or when the user cancels.
+    private val reqAppLock = 0xA10C
+    private var appLockResult: MethodChannel.Result? = null
+
+    private fun authenticateAppLock(result: MethodChannel.Result) {
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        val secure = if (Build.VERSION.SDK_INT >= 23) km.isDeviceSecure else km.isKeyguardSecure
+        if (!secure) { result.success(false); return }
+        val intent = km.createConfirmDeviceCredentialIntent(
+            "Unlock NeoDesk", "Confirm your identity to continue")
+        if (intent == null) { result.success(false); return }
+        appLockResult?.success(false) // resolve any stale pending request
+        appLockResult = result
+        startActivityForResult(intent, reqAppLock)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
