@@ -641,6 +641,9 @@ class SessionController extends ChangeNotifier {
   /// Retry the connection after an unexpected drop, with a short capped backoff,
   /// up to [_maxReconnect] times. After that, give up (the page then closes).
   void _scheduleReconnect() {
+    // Idempotent while a retry is already pending — a single drop can emit both
+    // `error` and `closed`, which must not burn two attempts / start two timers.
+    if (_reconnectTimer?.isActive ?? false) return;
     if (reconnectAttempt >= _maxReconnect) {
       reconnecting = false; // exhausted — let the page close
       return;

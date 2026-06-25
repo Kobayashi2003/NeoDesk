@@ -154,10 +154,11 @@ class RustdeskCore implements nd.NeodeskCore {
   @override
   Future<bool> downloadAndInstall(String url,
       {void Function(double)? onProgress}) async {
+    final client = http.Client();
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/neodesk-update.apk');
-      final resp = await http.Client().send(http.Request('GET', Uri.parse(url)));
+      final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) return false;
       final total = resp.contentLength ?? 0;
       final sink = file.openWrite();
@@ -174,6 +175,8 @@ class RustdeskCore implements nd.NeodeskCore {
       return ok ?? false;
     } catch (_) {
       return false;
+    } finally {
+      client.close();
     }
   }
 
