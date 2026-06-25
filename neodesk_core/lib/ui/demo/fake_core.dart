@@ -9,7 +9,7 @@ import 'package:neodesk_core/neodesk_core.dart';
 /// This is NOT the RustDesk adapter — it exists so the new UI/gesture layer
 /// (lib/ui) can be developed, run and tested standalone, with no native engine
 /// or Rust toolchain present. The real app swaps in `RustdeskCore`
-/// (apps/neodesk/lib/neodesk/adapter.dart) and the UI is unchanged.
+/// (rustdesk/lib/neodesk/adapter.dart) and the UI is unchanged.
 class FakeCore implements NeodeskCore {
   FakeCore()
       : _peers = FakePeerRepository(),

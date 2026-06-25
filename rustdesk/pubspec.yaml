@@ -16,8 +16,8 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # 1.1.9-1 works for android, but for ios it becomes 1.1.91, need to set it to 1.1.9-a.1 for iOS, will get 1.1.9.1, but iOS store not allow 4 numbers
-# neodesk app version (test phase, < 1.0). Keep in lock-step with
-# packages/neodesk_core/lib/core/version.dart (kNeodeskVersion); bump the +build
+# neodesk app version. Keep in lock-step with
+# neodesk_core/lib/core/version.dart (kNeodeskVersion); bump the +build
 # monotonically so installs never hit an Android version-downgrade.
 version: 1.0.0+105
 
@@ -32,7 +32,7 @@ dependencies:
   # Redesigned UI/gesture layer (neodesk). The adapter below
   # (lib/neodesk/adapter.dart) binds its ports to this app's engine.
   neodesk_core:
-    path: ../../packages/neodesk_core
+    path: ../neodesk_core
 
   ffi: ^2.1.0
   path_provider: ^2.1.1
@@ -148,9 +148,9 @@ dependency_overrides:
 # rerun: flutter pub run flutter_launcher_icons
 # Android-only (this is a mobile app); uses neodesk's Spotify-green cursor icon.
 flutter_icons:
-  image_path: "../../assets/icon/neodesk_icon_1024.png"
+  image_path: "../neodesk_core/assets/icon/neodesk_icon_1024.png"
   adaptive_icon_background: "#121212"
-  adaptive_icon_foreground: "../../assets/icon/neodesk_icon_foreground_1024.png"
+  adaptive_icon_foreground: "../neodesk_core/assets/icon/neodesk_icon_foreground_1024.png"
   android: true
 
 # For information on the generic Dart part of this file, see the

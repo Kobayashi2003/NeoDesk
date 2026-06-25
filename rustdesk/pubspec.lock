@@ -944,7 +944,7 @@ packages:
   neodesk_core:
     dependency: "direct main"
     description:
-      path: "../../packages/neodesk_core"
+      path: "../neodesk_core"
       relative: true
     source: path
     version: "0.0.1"

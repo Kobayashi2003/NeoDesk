@@ -12,7 +12,7 @@ import '../ports/remote_session.dart';
 /// Bundles the ports a remote-control screen needs. The UI depends on this
 /// single object and never reaches into the native engine directly. Concrete
 /// implementations: `FakeCore` (lib/ui/demo, in-memory) for the standalone demo,
-/// and `RustdeskCore` (apps/neodesk/lib/neodesk/adapter.dart) bound to the engine.
+/// and `RustdeskCore` (rustdesk/lib/neodesk/adapter.dart) bound to the engine.
 abstract interface class NeodeskCore {
   RemoteSessionFactory get sessions;
   ConfigStore get config;

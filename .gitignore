@@ -55,11 +55,14 @@ app.*.symbols
 run_*.txt
 *.output
 
-# Built artifacts (the engine app is built into app/build; the FakeCore demo
-# into packages/neodesk_core/build; APKs are large binaries kept on disk for
+# Built artifacts (the engine app is built into rustdesk/build; the FakeCore demo
+# into neodesk_core/build; APKs are large binaries kept on disk for
 # testing, not in git).
 *.apk
 **/build/
 
 # Design notes — local reference only (not published)
 /DESIGN.md
+
+# Build output (scripts/build.sh)
+/dist/
