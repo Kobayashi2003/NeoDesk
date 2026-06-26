@@ -541,7 +541,35 @@ class SessionController extends ChangeNotifier {
     if (currentDisplay == index) return;
     currentDisplay = index;
     session.switchDisplay(index); // actually switch the remote monitor
+    _refitForDisplaySwitch();
     notifyListeners();
+  }
+
+  /// One-shot canvas re-fit after a display switch: the new monitor may have a
+  /// different resolution, so the previous display's scale/offset won't frame
+  /// it. We watch the frame stream and fit once the engine publishes the new
+  /// display's geometry (or after a few frames, for a same-resolution monitor
+  /// where only the origin changed).
+  StreamSubscription? _switchFitSub;
+  void _refitForDisplaySwitch() {
+    _switchFitSub?.cancel();
+    final before = frameSource.displayGeometry;
+    var ticks = 0;
+    _switchFitSub = frameSource.onFrame.listen((_) {
+      if (_disposed) return _cancelSwitchFit();
+      final now = frameSource.displayGeometry;
+      final geometryChanged =
+          now.width != before.width || now.height != before.height;
+      if (geometryChanged || ++ticks >= 4) {
+        fitCanvas();
+        _cancelSwitchFit();
+      }
+    });
+  }
+
+  void _cancelSwitchFit() {
+    _switchFitSub?.cancel();
+    _switchFitSub = null;
   }
 
   /// Streamed image quality (`best` / `balanced` / `low`), applied to the engine.
@@ -656,6 +684,7 @@ class SessionController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _reconnectTimer?.cancel();
+    _switchFitSub?.cancel();
     _chromeTimer?.cancel();
     _edgePanTimer?.cancel();
     _phaseSub?.cancel();

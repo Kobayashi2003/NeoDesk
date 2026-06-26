@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:neodesk_core/neodesk_core.dart';
 
 import '../../theme/app_colors.dart';
@@ -255,9 +256,19 @@ class OverlayChrome extends StatelessWidget {
               _toggleTile(ctx, 'Scroll strip', controller.scrollStripVisible,
                   controller.toggleScrollStrip),
 
-              // ---- Remote actions (desktop targets only) ----
+              // ---- Remote actions ----
+              _sheetHeader('Remote'),
+              // Push the phone's clipboard text to the remote. Android restricts
+              // background clipboard reads, so auto-sync is unreliable — this is
+              // an explicit, foreground "paste my clipboard onto the remote".
+              _actionTile(ctx, Icons.content_paste_go_outlined, 'Paste clipboard',
+                  subtitle: 'Type phone clipboard onto the remote',
+                  onTap: () => _pasteClipboard(context)),
+              _actionTile(ctx, Icons.content_copy_outlined,
+                  'Copy remote clipboard',
+                  subtitle: "Put the remote's clipboard on this phone",
+                  onTap: () => _copyRemoteClipboard(context)),
               if (!isAndroid) ...[
-                _sheetHeader('Remote'),
                 _actionTile(ctx, Icons.keyboard, 'Ctrl + Alt + Del',
                     onTap: () => controller.ctrlAltDel()),
                 _actionTile(ctx, Icons.lock_outline, 'Lock remote screen',
@@ -388,6 +399,47 @@ class OverlayChrome extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Reads the phone's clipboard and inputs it onto the remote at the focused
+  /// field. (There's no "set remote clipboard" call, so we type it via the
+  /// engine's input-string path — the practical fix for mobile's painful typing.)
+  Future<void> _pasteClipboard(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (controller.viewOnly) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('View-only mode — input is disabled')));
+      return;
+    }
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text ?? '';
+    if (text.isEmpty) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Clipboard is empty')));
+      return;
+    }
+    await controller.input.text(text);
+    messenger.showSnackBar(SnackBar(
+        content: Text('Pasted ${text.length} '
+            'character${text.length == 1 ? '' : 's'} to the remote')));
+  }
+
+  /// Puts the remote's most recently pushed clipboard text onto the phone. The
+  /// remote only pushes on a clipboard change after connecting, and needs the
+  /// "Sync clipboard" option on — so hint when nothing has arrived yet.
+  Future<void> _copyRemoteClipboard(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final text = controller.core.remoteClipboardText ?? '';
+    if (text.isEmpty) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('No remote clipboard yet — enable "Sync clipboard" and '
+              'copy something on the remote first')));
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+    messenger.showSnackBar(SnackBar(
+        content: Text('Copied ${text.length} '
+            'character${text.length == 1 ? '' : 's'} from the remote')));
   }
 
   /// Display switcher sheet (radio list of monitors).

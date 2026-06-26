@@ -10,7 +10,6 @@ library;
 import 'dart:async';
 import 'dart:convert' show jsonDecode;
 import 'dart:io' show File, Socket;
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter/widgets.dart' show BuildContext;
@@ -21,10 +20,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'clipboard_hook.dart';
 import 'scan_page.dart';
 import 'terminal_page.dart';
 
-import '../common.dart' show gFFI, isAndroid, AndroidPermissionManager;
+import '../common.dart'
+    show gFFI, isAndroid, AndroidPermissionManager, openMonitorInTheSameTab;
 import '../consts.dart'
     show
         kManageExternalStorage,
@@ -67,7 +68,15 @@ class RustdeskCore implements nd.NeodeskCore {
         },
       ));
     });
+    // Capture the peer's pushed clipboard so the UI can offer an explicit
+    // "Copy remote clipboard" (the engine also auto-sets the system clipboard).
+    neodeskRemoteClipboardHook = (t) => _lastRemoteClipboard = t;
   }
+
+  String? _lastRemoteClipboard;
+
+  @override
+  String? get remoteClipboardText => _lastRemoteClipboard;
 
   final _RustdeskSessionFactory _factory;
   final _RustdeskFileTransferFactory _files;
@@ -169,7 +178,21 @@ class RustdeskCore implements nd.NeodeskCore {
     final client = http.Client();
     try {
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/neodesk-update.apk');
+      // Use a fresh filename per download (and clear old ones). Reusing one fixed
+      // path makes Android's package installer serve a STALE previously-downloaded
+      // APK from the cached content URI — it then rejects the install as "a higher
+      // version is already installed". A unique name → fresh URI → fresh parse.
+      for (final f in dir.listSync()) {
+        if (f is File &&
+            f.path.contains('neodesk-update') &&
+            f.path.endsWith('.apk')) {
+          try {
+            f.deleteSync();
+          } catch (_) {}
+        }
+      }
+      final file = File(
+          '${dir.path}/neodesk-update-${DateTime.now().millisecondsSinceEpoch}.apk');
       final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) return false;
       final total = resp.contentLength ?? 0;

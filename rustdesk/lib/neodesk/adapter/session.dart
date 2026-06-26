@@ -131,11 +131,14 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
   }
 
   @override
-  Future<void> switchDisplay(int index) => bind.sessionSwitchDisplay(
-        isDesktop: false,
-        sessionId: gFFI.sessionId,
-        value: Int32List.fromList([index]),
-      );
+  Future<void> switchDisplay(int index) async {
+    // Switch the streamed display AND update the LOCAL display metadata
+    // (pi.currentDisplay, display rect, cursor origin, canvas view-style,
+    // resolution). A bare bind.sessionSwitchDisplay only does the former, so the
+    // image switched while the cursor range / resolution stayed on the old
+    // display. openMonitorInTheSameTab is stock RustDesk's combined helper.
+    openMonitorInTheSameTab(index, gFFI, gFFI.ffiModel.pi);
+  }
 
   @override
   Future<void> setImageQuality(String value) =>
