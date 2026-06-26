@@ -118,7 +118,15 @@ class _SettingsPageState extends State<SettingsPage> {
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
     _appLock = _cfg.getBool(ConfigKeys.appLock);
+    // Show the real installed version (Android's versionName), not the
+    // compile-time constant, which can drift from the built APK.
+    _version = kNeodeskVersion;
+    widget.core.appVersion().then((v) {
+      if (mounted) setState(() => _version = v);
+    });
   }
+
+  late String _version;
 
   static const _opacityMin = 0.55, _opacityMax = 1.0;
 
@@ -430,7 +438,7 @@ class _SettingsPageState extends State<SettingsPage> {
             }),
           ]),
           _section('About', [
-            _row(Icons.info_outline, 'Version', value: kNeodeskVersion),
+            _row(Icons.info_outline, 'Version', value: _version),
             _row(Icons.system_update, 'Check for updates', onTap: _checkUpdate),
           ]),
           const SizedBox(height: Dimens.s24),

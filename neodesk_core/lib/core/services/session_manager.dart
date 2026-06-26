@@ -36,6 +36,12 @@ abstract interface class NeodeskCore {
   /// so the session can hide its chrome/floating handle while in the small window.
   Stream<bool> get pictureInPictureMode;
 
+  /// The actual installed app version (from the platform package metadata, i.e.
+  /// the same string Android shows), e.g. "1.2.3". Use this for display and
+  /// update comparisons instead of the compile-time [kNeodeskVersion] constant,
+  /// which can drift from the built APK. The demo returns [kNeodeskVersion].
+  Future<String> appVersion();
+
   /// Check the project's GitHub releases for a newer version. Returns null when
   /// already up to date (or on any error). The demo returns null.
   Future<UpdateInfo?> checkForUpdate();

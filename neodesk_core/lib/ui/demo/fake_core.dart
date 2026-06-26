@@ -45,6 +45,9 @@ class FakeCore implements NeodeskCore {
   Stream<bool> get pictureInPictureMode => const Stream.empty();
 
   @override
+  Future<String> appVersion() async => kNeodeskVersion;
+
+  @override
   Future<UpdateInfo?> checkForUpdate() async => null;
 
   @override

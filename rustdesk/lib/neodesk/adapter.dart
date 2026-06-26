@@ -17,6 +17,7 @@ import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:neodesk_core/neodesk_core.dart' as nd;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -105,6 +106,17 @@ class RustdeskCore implements nd.NeodeskCore {
   static const _releasesApi =
       'https://api.github.com/repos/Kobayashi2003/NeoDesk/releases/latest';
 
+  // The real installed version (Android's versionName), cached. Compared against
+  // release tags so the updater can never offer a version we already have — the
+  // compile-time kNeodeskVersion constant can lag the built APK and did, which
+  // made the updater re-download an already-installed build.
+  String? _appVersionCache;
+  Future<String> _currentVersion() async =>
+      _appVersionCache ??= (await PackageInfo.fromPlatform()).version;
+
+  @override
+  Future<String> appVersion() => _currentVersion();
+
   @override
   Future<nd.UpdateInfo?> checkForUpdate() async {
     try {
@@ -112,8 +124,8 @@ class RustdeskCore implements nd.NeodeskCore {
           headers: {'Accept': 'application/vnd.github+json'});
       if (resp.statusCode != 200) return null;
       final j = jsonDecode(resp.body) as Map<String, dynamic>;
-      final tag = (j['tag_name'] as String? ?? '').replaceFirst('v', '');
-      if (!_isNewer(tag, nd.kNeodeskVersion)) return null;
+      final tag = (j['tag_name'] as String? ?? '').replaceFirst(RegExp(r'^v'), '');
+      if (!_isNewer(tag, await _currentVersion())) return null;
       // Prefer the .apk asset's direct download, else the release page.
       var url = j['html_url'] as String? ?? '';
       for (final a in (j['assets'] as List? ?? const [])) {
