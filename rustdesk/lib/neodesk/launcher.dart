@@ -112,6 +112,10 @@ class _RustdeskCursorControl implements NeodeskCursorControl {
   @override
   void moveBy(double screenDx, double screenDy) => gFFI.cursorModel
       .updatePan(Offset(screenDx, screenDy), Offset.zero, false);
+
+  @override
+  Offset? get imagePosition =>
+      Offset(gFFI.cursorModel.x, gFFI.cursorModel.y);
 }
 
 /// Drives the real remote canvas (pan / zoom) from neodesk's gesture layer and

@@ -135,6 +135,11 @@ class SessionController extends ChangeNotifier {
 
   static const double _edgeMargin = 40;
 
+  /// In Pointer mode, keep the cursor at least this many screen px inside the
+  /// viewport while zooming, so it tracks the edge instead of being pushed
+  /// off-screen and lost.
+  static const double _cursorZoomMargin = 8;
+
   StreamSubscription? _phaseSub;
   StreamSubscription? _peerSub;
   StreamSubscription? _qualitySub;
@@ -144,6 +149,10 @@ class SessionController extends ChangeNotifier {
   /// Whether the cursor has been centred for the current connection (once it is,
   /// we stop re-centring on every frame).
   bool _cursorCentered = false;
+
+  /// Guards [_ensureCursorCentered] against overlapping async runs (it awaits an
+  /// FFI move and is driven from the per-frame stream).
+  bool _centeringInFlight = false;
 
   /// Auto-reconnect state. [reconnecting] is true while retrying after an
   /// unexpected drop; [reconnectAttempt] is the current attempt (1.._maxReconnect).
@@ -278,21 +287,37 @@ class SessionController extends ChangeNotifier {
     return c == null ? true : await c.moveTo(v.vw / 2, v.vh / 2);
   }
 
-  /// Centre the cursor once per connection. Retried from the frame stream because
-  /// on a cold start the engine refuses the move until its display geometry is
-  /// ready — so only commit (and stop retrying) once it actually lands; otherwise
-  /// the pointer is left stuck at the remote's top-left.
+  /// Centre the cursor once per connection. Retried from the frame stream for two
+  /// reasons: on a cold start the engine refuses the move until its display
+  /// geometry is ready; and, more subtly, the engine performs a *one-time* cursor
+  /// reset to the remote's top-left when it decodes the first image
+  /// (`initializeCursorAndCanvas` → `updateDisplayOrigin`). If we centre before
+  /// that reset, it gets clobbered — the exact cold-start race where the pointer
+  /// is left stuck at the top-left. So we only *commit* (and stop retrying) once
+  /// the first frame has arrived (past the reset) and the move actually lands;
+  /// before that we just pre-centre optimistically (a nicety on a warm start).
   Future<void> _ensureCursorCentered() async {
-    if (_cursorCentered || phase != SessionPhase.connected) return;
+    if (_cursorCentered ||
+        _centeringInFlight ||
+        phase != SessionPhase.connected) return;
     final v = view;
     if (!v.isValid || viewport.isEmpty) return;
-    _cursorCentered = true; // optimistic — prevents re-entrant double-attempts
-    if (await _recenterCursor()) {
-      // Landed: stop watching frames (re-armed on reconnect).
-      _frameSub?.cancel();
-      _frameSub = null;
-    } else {
-      _cursorCentered = false; // engine not ready — retry on the next frame
+    _centeringInFlight = true;
+    try {
+      if (!frameSource.hasFirstFrame) {
+        await _recenterCursor(); // pre-centre, but don't commit yet
+        return;
+      }
+      if (await _recenterCursor()) {
+        _cursorCentered = true;
+        // Landed past the first-image reset: stop watching frames (re-armed on
+        // reconnect).
+        _frameSub?.cancel();
+        _frameSub = null;
+      }
+      // else: engine geometry not ready — retry on the next frame.
+    } finally {
+      _centeringInFlight = false;
     }
   }
 
@@ -444,10 +469,12 @@ class SessionController extends ChangeNotifier {
   /// translates. The real engine clamps itself (§11.2); FakeCore clamps here.
   void transformCanvas(
       {Offset pan = Offset.zero, double zoom = 1.0, Offset? focal}) {
+    final zooming = zoom != 1.0 && focal != null;
     final c = neodeskCanvasOverride;
     if (c != null) {
       if (pan != Offset.zero) c.panBy(pan.dx, pan.dy);
-      if (zoom != 1.0 && focal != null) c.zoomBy(zoom, focal);
+      if (zooming) c.zoomBy(zoom, focal);
+      if (zooming && mode == InteractionUiMode.pointer) _keepCursorOnScreen();
       notifyListeners();
       return;
     }
@@ -455,7 +482,7 @@ class SessionController extends ChangeNotifier {
     var ox = v.ox + pan.dx;
     var oy = v.oy + pan.dy;
     var s = v.s;
-    if (zoom != 1.0 && focal != null) {
+    if (zooming) {
       final ns = (s * zoom)
           .clamp(v.fitScale, math.max(v.fitScale, zoomMax))
           .toDouble();
@@ -467,7 +494,32 @@ class SessionController extends ChangeNotifier {
     final clamped = v.clampOffset(ox, oy, s);
     canvas =
         CanvasTransform(offsetX: clamped.dx, offsetY: clamped.dy, scale: s);
+    if (zooming && mode == InteractionUiMode.pointer) _keepCursorOnScreen();
     notifyListeners();
+  }
+
+  /// Pointer mode: after a zoom, a cursor that was sitting near a viewport edge
+  /// would be carried off-screen (its image position is unchanged but the larger
+  /// scale moves its *screen* position outward). Clamp its screen position back
+  /// inside the viewport so that, once it reaches an edge, further zoom drags it
+  /// along the edge instead of losing it. No-op while it stays well inside.
+  void _keepCursorOnScreen() {
+    final v = view;
+    if (!v.isValid || v.vw <= 0 || v.vh <= 0) return;
+    final c = neodeskCursorOverride;
+    final img = c != null ? c.imagePosition : cursorImage;
+    if (img == null) return;
+    final screen = v.imageToScreen(img);
+    const m = _cursorZoomMargin;
+    final cx = screen.dx.clamp(m, math.max(m, v.vw - m)).toDouble();
+    final cy = screen.dy.clamp(m, math.max(m, v.vh - m)).toDouble();
+    if ((cx - screen.dx).abs() < 0.5 && (cy - screen.dy).abs() < 0.5) return;
+    if (c != null) {
+      c.moveTo(cx, cy);
+    } else {
+      cursorImage = v.screenToImage(Offset(cx, cy));
+      input.moveTo(cursorImage.dx, cursorImage.dy);
+    }
   }
 
   void panCanvas(Offset delta) => transformCanvas(pan: delta);

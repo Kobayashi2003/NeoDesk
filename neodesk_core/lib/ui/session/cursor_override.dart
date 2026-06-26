@@ -8,6 +8,10 @@
 ///
 /// When null, the gesture layer falls back to the FakeCore path: it does its own
 /// screen<->image conversion and moves a local virtual cursor.
+library;
+
+import 'package:flutter/widgets.dart' show Offset;
+
 abstract interface class NeodeskCursorControl {
   /// Touch mode: place the cursor under the given screen point (absolute).
   /// Returns whether the cursor was actually moved — the engine refuses the move
@@ -19,6 +23,12 @@ abstract interface class NeodeskCursorControl {
   /// Pointer mode: move the cursor by a screen-space delta (relative trackpad).
   /// The real engine also auto-pans the canvas when the cursor reaches an edge.
   void moveBy(double screenDx, double screenDy);
+
+  /// The cursor's current position in **image** coordinates, or null if the
+  /// engine isn't tracking one yet. Lets the view keep the cursor on-screen as
+  /// the canvas zooms (a zoom moves the cursor's *screen* position even though
+  /// its image position is unchanged).
+  Offset? get imagePosition;
 }
 
 NeodeskCursorControl? neodeskCursorOverride;
