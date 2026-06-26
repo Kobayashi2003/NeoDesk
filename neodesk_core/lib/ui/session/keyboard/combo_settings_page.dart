@@ -63,10 +63,10 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(editing == null ? 'New shortcut' : 'Edit shortcut',
+                Text(tr(editing == null ? 'New shortcut' : 'Edit shortcut'),
                     style: AppTypography.title),
                 const SizedBox(height: Dimens.s16),
-                const Text('Modifiers', style: AppTypography.caption),
+                Text(tr('Modifiers'), style: AppTypography.caption),
                 const SizedBox(height: Dimens.s8),
                 Wrap(
                   spacing: Dimens.s8,
@@ -83,7 +83,7 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
                 const SizedBox(height: Dimens.s16),
                 Row(
                   children: [
-                    const Text('Key', style: AppTypography.caption),
+                    Text(tr('Key'), style: AppTypography.caption),
                     const SizedBox(width: Dimens.s16),
                     DropdownButton<String>(
                       value: keyDisplay,
@@ -122,7 +122,7 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
                       _save();
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Save'),
+                    child: Text(tr('Save')),
                   ),
                 ),
               ],
@@ -137,14 +137,14 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Shortcut combos'),
+        title: Text(tr('Shortcut combos')),
         actions: [
           TextButton(
             onPressed: () {
               setState(() => _combos = ComboStore.defaults());
               _save();
             },
-            child: Text('Reset',
+            child: Text(tr('Reset'),
                 style: AppTypography.button.copyWith(color: AppColors.accent)),
           ),
         ],

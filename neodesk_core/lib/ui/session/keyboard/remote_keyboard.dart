@@ -365,7 +365,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
             _chip('Fn', widget.onToggleSpecial,
                 active: widget.specialActive, icon: Icons.functions),
             const SizedBox(width: Dimens.s8),
-            _chip('Combos', widget.onToggleCombos,
+            _chip(tr('Combos'), widget.onToggleCombos,
                 active: widget.combosActive, icon: Icons.bolt),
             const Spacer(),
             _tapButton(Icons.keyboard_hide, widget.onHide),
@@ -377,7 +377,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   // Compact mode: fewer, horizontally-scrollable rows (a much shorter panel).
   Widget _specialPanel() {
     final mods = [
-      _button('Hold', _tapHold, active: _holdArmed),
+      _button(tr('Hold'), _tapHold, active: _holdArmed),
       _modKey('Ctrl', 'ctrl'),
       _modKey('Alt', 'alt'),
       _modKey('Shift', 'shift'),

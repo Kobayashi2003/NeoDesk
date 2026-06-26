@@ -22,6 +22,9 @@ export 'core/ports/file_transfer.dart';
 // Config key registry
 export 'core/config_keys.dart';
 
+// UI localisation (zh / ja)
+export 'core/i18n/l10n.dart';
+
 // App version
 export 'core/version.dart';
 

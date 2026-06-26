@@ -87,11 +87,11 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customize gestures'),
+        title: Text(tr('Customize gestures')),
         actions: [
           TextButton(
             onPressed: _resetDefaults,
-            child: Text('Reset',
+            child: Text(tr('Reset'),
                 style: AppTypography.button.copyWith(color: AppColors.accent)),
           ),
         ],

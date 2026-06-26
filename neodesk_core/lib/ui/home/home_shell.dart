@@ -34,15 +34,15 @@ class _HomeShellState extends State<HomeShell> {
         child: BottomNavigationBar(
           currentIndex: _index,
           onTap: (i) => setState(() => _index = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.devices_outlined),
-                activeIcon: Icon(Icons.devices),
-                label: 'Devices'),
+                icon: const Icon(Icons.devices_outlined),
+                activeIcon: const Icon(Icons.devices),
+                label: tr('Devices')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.settings_outlined),
-                activeIcon: Icon(Icons.settings),
-                label: 'Settings'),
+                icon: const Icon(Icons.settings_outlined),
+                activeIcon: const Icon(Icons.settings),
+                label: tr('Settings')),
           ],
         ),
       ),

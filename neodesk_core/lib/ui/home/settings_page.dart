@@ -59,7 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
   static const _languages = <_Option>[
     (label: 'Follow system', value: 'system', sub: null),
     (label: 'English', value: 'en', sub: null),
-    (label: '中文', value: 'zh-cn', sub: 'Engine dialogs only'),
+    (label: '中文', value: 'zh-cn', sub: null),
+    (label: '日本語', value: 'ja', sub: null),
   ];
   // Per-volume-key actions. A quick press taps; holding holds (scroll repeats).
   static const _volumeActions = <_Option>[
@@ -185,7 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(Dimens.s16),
-              child: Text(title, style: AppTypography.title),
+              child: Text(tr(title), style: AppTypography.title),
             ),
             ...items.entries.map((e) {
               final selected = e.key == current;
@@ -197,10 +198,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       : Icons.radio_button_unchecked,
                   color: selected ? AppColors.accent : AppColors.textSecondary,
                 ),
-                title: Text(e.key, style: AppTypography.body),
+                title: Text(tr(e.key), style: AppTypography.body),
                 subtitle: sub.isEmpty
                     ? null
-                    : Text(sub, style: AppTypography.caption),
+                    : Text(tr(sub), style: AppTypography.caption),
                 onTap: () {
                   onPick(e.value);
                   Navigator.pop(ctx);
@@ -214,14 +215,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _checkUpdate() async {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Checking for updates…'),
-        duration: Duration(seconds: 1)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('Checking for updates…')),
+        duration: const Duration(seconds: 1)));
     final info = await widget.core.checkForUpdate();
     if (!mounted) return;
     if (info == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("You're on the latest version")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr("You're on the latest version"))));
       return;
     }
     showDialog(
@@ -230,14 +231,14 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Row(children: [
           const Icon(Icons.system_update, color: AppColors.accent),
           const SizedBox(width: Dimens.s12),
-          Expanded(child: Text('Update to v${info.version}')),
+          Expanded(child: Text('${tr('Update')} · v${info.version}')),
         ]),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 320),
           child: SingleChildScrollView(
             child: Text(
                 info.notes.isEmpty
-                    ? 'A newer version is available.'
+                    ? tr('A newer version is available.')
                     : info.notes,
                 style: AppTypography.body
                     .copyWith(color: AppColors.textSecondary)),
@@ -245,14 +246,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
+              onPressed: () => Navigator.pop(ctx), child: Text(tr('Later'))),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
               _downloadUpdate(info);
             },
             icon: const Icon(Icons.download_rounded, size: 18),
-            label: const Text('Update'),
+            label: Text(tr('Update')),
           ),
         ],
       ),
@@ -273,7 +274,7 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Row(children: [
           const Icon(Icons.download_rounded, color: AppColors.accent),
           const SizedBox(width: Dimens.s12),
-          Expanded(child: Text('Downloading v${info.version}')),
+          Expanded(child: Text('${tr('Update')} · v${info.version}')),
         ]),
         content: ValueListenableBuilder<(int, int)>(
           valueListenable: progress,
@@ -311,8 +312,8 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop(); // close progress dialog
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Download failed — opening in browser')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('Download failed — opening in browser'))));
         widget.core.openExternalUrl(info.url);
       }
     }
@@ -324,10 +325,10 @@ class _SettingsPageState extends State<SettingsPage> {
     return SafeArea(
       child: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
-            child: Text('Settings', style: AppTypography.display),
+            child: Text(tr('Settings'), style: AppTypography.display),
           ),
           // Grouped by what you're adjusting: how you interact, the pointer &
           // scrolling feel, the keyboard/keys surfaces, then app-level.
@@ -422,7 +423,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => _pickOption('Language', _languages,
                     ConfigKeys.language, _language, (v) {
                   setState(() => _language = v);
-                  widget.core.setLanguage(v); // engine dialogs, going forward
+                  widget.core.setLanguage(v); // engine dialogs
+                  applyLocale(v); // neodesk's own UI (zh / ja), live
                 })),
             _row(Icons.speed_outlined, 'Quality monitor',
                 value: _labelOf(_qualityDetails, _qualityDetail),
@@ -441,9 +443,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 // before turning the lock on, so they can't lock themselves out.
                 final ok = await widget.core.authenticateAppLock();
                 if (!ok) {
-                  messenger.showSnackBar(const SnackBar(
-                      content: Text(
-                          'Set a device screen lock first (or authentication was cancelled)')));
+                  messenger.showSnackBar(SnackBar(
+                      content: Text(tr(
+                          'Set a device screen lock first (or authentication was cancelled)'))));
                   return;
                 }
               }
@@ -472,7 +474,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   Dimens.s4, Dimens.s24, 0, Dimens.s8),
-              child: Text(title.toUpperCase(),
+              child: Text(tr(title).toUpperCase(),
                   style: AppTypography.caption.copyWith(
                       color: AppColors.accent,
                       fontWeight: FontWeight.w700,
@@ -506,11 +508,11 @@ class _SettingsPageState extends State<SettingsPage> {
           {String? value, VoidCallback? onTap}) =>
       ListTile(
         leading: Icon(icon, color: AppColors.textSecondary),
-        title: Text(label, style: AppTypography.body),
+        title: Text(tr(label), style: AppTypography.body),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (value != null) Text(value, style: AppTypography.caption),
+            if (value != null) Text(tr(value), style: AppTypography.caption),
             const SizedBox(width: 4),
             if (onTap != null)
               const Icon(Icons.chevron_right,
@@ -524,7 +526,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ValueChanged<bool> onChanged) =>
       ListTile(
         leading: Icon(icon, color: AppColors.textSecondary),
-        title: Text(label, style: AppTypography.body),
+        title: Text(tr(label), style: AppTypography.body),
         trailing: Switch(value: value, onChanged: onChanged),
         onTap: () => onChanged(!value),
       );
@@ -538,12 +540,12 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         ListTile(
           leading: Icon(icon, color: AppColors.textSecondary),
-          title: Text(label, style: AppTypography.body),
+          title: Text(tr(label), style: AppTypography.body),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (valueText != null)
-                Text(valueText, style: AppTypography.caption),
+                Text(tr(valueText), style: AppTypography.caption),
               const SizedBox(width: 4),
               Icon(open ? Icons.expand_less : Icons.expand_more,
                   color: AppColors.textDisabled, size: 20),

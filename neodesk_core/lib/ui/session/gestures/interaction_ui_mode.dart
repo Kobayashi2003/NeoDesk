@@ -1,3 +1,5 @@
+import 'package:neodesk_core/neodesk_core.dart' show tr;
+
 /// The UI-level operation modes. See DESIGN.md.
 ///
 /// A *UI* concept that does not change lib/core — each value decides which
@@ -13,14 +15,14 @@ enum InteractionUiMode {
 
 extension InteractionUiModeX on InteractionUiMode {
   String get label => switch (this) {
-        InteractionUiMode.touch => 'Touch',
-        InteractionUiMode.pointer => 'Pointer',
+        InteractionUiMode.touch => tr('Touch'),
+        InteractionUiMode.pointer => tr('Pointer'),
       };
 
   String get description => switch (this) {
-        InteractionUiMode.touch => 'Tap where you want to click',
-        InteractionUiMode.pointer =>
-          'Full-screen trackpad: drag to move the pointer, gestures to click',
+        InteractionUiMode.touch => tr('Tap where you want to click'),
+        InteractionUiMode.pointer => tr(
+            'Full-screen trackpad: drag to move the pointer, gestures to click'),
       };
 
   /// Persistence key value.

@@ -56,7 +56,7 @@ class _AppLockGateState extends State<AppLockGate> {
             const Icon(Icons.lock_outline,
                 size: 56, color: AppColors.textSecondary),
             const SizedBox(height: Dimens.s16),
-            const Text('NeoDesk is locked', style: AppTypography.body),
+            Text(tr('NeoDesk is locked'), style: AppTypography.body),
             const SizedBox(height: Dimens.s24),
             if (_authing)
               const CircularProgressIndicator(color: AppColors.accent)
@@ -64,7 +64,7 @@ class _AppLockGateState extends State<AppLockGate> {
               ElevatedButton.icon(
                 onPressed: _authenticate,
                 icon: const Icon(Icons.fingerprint),
-                label: const Text('Unlock'),
+                label: Text(tr('Unlock')),
               ),
           ],
         ),

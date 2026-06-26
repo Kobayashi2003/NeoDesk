@@ -109,7 +109,7 @@ class OverlayChrome extends StatelessWidget {
   Widget _zoomButton(IconData icon, String tooltip, VoidCallback onTap) =>
       IconButton(
         icon: Icon(icon, size: 20),
-        tooltip: tooltip,
+        tooltip: tr(tooltip),
         visualDensity: VisualDensity.compact,
         color: AppColors.textSecondary,
         onPressed: onTap,
@@ -176,7 +176,8 @@ class OverlayChrome extends StatelessWidget {
             children: [
               Icon(icon, size: 22, color: AppColors.textPrimary),
               const SizedBox(height: 2),
-              Text(label, style: AppTypography.caption.copyWith(fontSize: 11)),
+              Text(tr(label),
+                  style: AppTypography.caption.copyWith(fontSize: 11)),
             ],
           ),
         ),
@@ -308,7 +309,7 @@ class OverlayChrome extends StatelessWidget {
             Dimens.s16, Dimens.s16, Dimens.s16, Dimens.s4),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Text(title.toUpperCase(),
+          child: Text(tr(title).toUpperCase(),
               style: AppTypography.caption.copyWith(
                   color: AppColors.accent,
                   fontWeight: FontWeight.w700,
@@ -325,13 +326,13 @@ class OverlayChrome extends StatelessWidget {
           required VoidCallback onTap}) =>
       ListTile(
         leading: Icon(icon, color: AppColors.textSecondary),
-        title: Text(title),
+        title: Text(tr(title)),
         subtitle: subtitle == null
             ? null
-            : Text(subtitle, style: AppTypography.caption),
+            : Text(tr(subtitle), style: AppTypography.caption),
         trailing: trailing == null
             ? null
-            : Text(trailing,
+            : Text(tr(trailing),
                 style:
                     AppTypography.caption.copyWith(color: AppColors.accent)),
         onTap: () {
@@ -374,7 +375,7 @@ class OverlayChrome extends StatelessWidget {
                     ? AppColors.accent
                     : AppColors.textSecondary,
               ),
-              title: Text(e.value, style: AppTypography.body),
+              title: Text(tr(e.value), style: AppTypography.body),
               onTap: () {
                 Navigator.pop(ctx);
                 if (e.key == ImageQuality.custom) {
@@ -393,7 +394,7 @@ class OverlayChrome extends StatelessWidget {
   /// Display switcher sheet (radio list of monitors).
   void _displaySheet(BuildContext context, int count) => _radioSheet(
         context,
-        {for (var i = 0; i < count; i++) '$i': 'Display ${i + 1}'},
+        {for (var i = 0; i < count; i++) '$i': '${tr('Display')} ${i + 1}'},
         '${controller.currentDisplay}',
         (k) => controller.setDisplay(int.parse(k)),
       );
@@ -408,7 +409,7 @@ class OverlayChrome extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (items.isEmpty && emptyHint != null)
-            ListTile(title: Text(emptyHint, style: AppTypography.caption))
+            ListTile(title: Text(tr(emptyHint), style: AppTypography.caption))
           else
             for (final e in items.entries)
               ListTile(
@@ -420,7 +421,7 @@ class OverlayChrome extends StatelessWidget {
                       ? AppColors.accent
                       : AppColors.textSecondary,
                 ),
-                title: Text(e.value, style: AppTypography.body),
+                title: Text(tr(e.value), style: AppTypography.body),
                 onTap: () {
                   onPick(e.key);
                   Navigator.pop(ctx);
@@ -472,7 +473,7 @@ class OverlayChrome extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Custom quality', style: AppTypography.title),
+                Text(tr('Custom quality'), style: AppTypography.title),
                 _sliderRow('Image quality', '${q.round()}%', q, 10, 100,
                     (v) => setSt(() => q = v),
                     (v) => controller.setCustomQuality(v.round())),
@@ -495,7 +496,7 @@ class OverlayChrome extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: Dimens.s12),
             child: Row(children: [
-              Text(label, style: AppTypography.body),
+              Text(tr(label), style: AppTypography.body),
               const Spacer(),
               Text(value, style: AppTypography.caption),
             ]),
@@ -516,7 +517,7 @@ class OverlayChrome extends StatelessWidget {
       ListTile(
         leading: Icon(value ? Icons.toggle_on : Icons.toggle_off,
             color: value ? AppColors.accent : AppColors.textSecondary),
-        title: Text(label),
+        title: Text(tr(label)),
         onTap: () {
           onToggle();
           Navigator.pop(ctx);

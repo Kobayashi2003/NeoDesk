@@ -200,20 +200,21 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
     // Auto-reconnecting after a drop: show a retry view (with Cancel to bail out)
     // regardless of the raw phase, instead of "Connecting"/"Disconnected".
     if (_c.reconnecting) {
-      return _loading('Reconnecting… (attempt ${_c.reconnectAttempt})');
+      return _loading(
+          trArg('Reconnecting… (attempt {})', _c.reconnectAttempt));
     }
     switch (_c.phase) {
       case SessionPhase.idle:
       case SessionPhase.connecting:
-        return _loading('Connecting to ${widget.peerId}');
+        return _loading(trArg('Connecting to {}', widget.peerId));
       case SessionPhase.authenticating:
-        return _loading('Authenticating…');
+        return _loading(tr('Authenticating…'));
       case SessionPhase.waitingFirstImage:
-        return _loading('Waiting for image…');
+        return _loading(tr('Waiting for image…'));
       case SessionPhase.error:
         return _error();
       case SessionPhase.closed:
-        return _loading('Disconnected', cancellable: false);
+        return _loading(tr('Disconnected'), cancellable: false);
       case SessionPhase.connected:
         return _connected();
     }
@@ -276,8 +277,8 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
                 // back out cleanly (the engine retries can otherwise spin).
                 TextButton(
                   onPressed: _close,
-                  child: const Text('Cancel',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                  child: Text(tr('Cancel'),
+                      style: const TextStyle(color: AppColors.textSecondary)),
                 ),
               ],
             ],
@@ -295,10 +296,10 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
               const Icon(Icons.error_outline,
                   color: AppColors.danger, size: 48),
               const SizedBox(height: Dimens.s16),
-              const Text('Connection failed', style: AppTypography.title),
+              Text(tr('Connection failed'), style: AppTypography.title),
               const SizedBox(height: Dimens.s24),
               PillButton(
-                  label: 'Back',
+                  label: tr('Back'),
                   filled: false,
                   onPressed: () => Navigator.of(context).pop()),
             ],

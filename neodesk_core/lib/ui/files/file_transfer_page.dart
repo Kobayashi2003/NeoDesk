@@ -123,19 +123,19 @@ class _FileTransferPageState extends State<FileTransferPage> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title),
+        title: Text(tr(title)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Name'),
+          decoration: InputDecoration(hintText: tr('Name')),
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: Text(action)),
+              child: Text(tr(action))),
         ],
       ),
     );
@@ -184,11 +184,12 @@ class _FileTransferPageState extends State<FileTransferPage> {
   }
 
   AppBar _normalBar() => AppBar(
-        title: Text('Files · ${widget.peerId}', style: AppTypography.body),
+        title: Text(trArg('Files · {}', widget.peerId),
+            style: AppTypography.body),
         actions: [
           IconButton(
               icon: const Icon(Icons.create_new_folder_outlined),
-              tooltip: 'New folder',
+              tooltip: tr('New folder'),
               onPressed: _newFolder),
           IconButton(
               icon: const Icon(Icons.refresh), onPressed: () => _ft.refresh()),
@@ -200,7 +201,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
               CheckedPopupMenuItem(
                 value: 'hidden',
                 checked: _showHidden[_tab],
-                child: const Text('Show hidden files'),
+                child: Text(tr('Show hidden files')),
               ),
             ],
           ),
@@ -210,24 +211,25 @@ class _FileTransferPageState extends State<FileTransferPage> {
   AppBar _selectionBar() => AppBar(
         leading: IconButton(
             icon: const Icon(Icons.close), onPressed: _clearSelection),
-        title: Text('${_selected.length} selected', style: AppTypography.body),
+        title: Text(trArg('{} selected', _selected.length),
+            style: AppTypography.body),
         actions: [
           IconButton(
               icon: const Icon(Icons.select_all),
-              tooltip: 'Select all',
+              tooltip: tr('Select all'),
               onPressed: _selectAll),
           IconButton(
               icon: Icon(_isLocal ? Icons.upload : Icons.download),
-              tooltip: _isLocal ? 'Upload' : 'Download',
+              tooltip: _isLocal ? tr('Upload') : tr('Download'),
               onPressed: _selected.isEmpty ? null : _transferSelected),
           if (_selected.length == 1)
             IconButton(
                 icon: const Icon(Icons.drive_file_rename_outline),
-                tooltip: 'Rename',
+                tooltip: tr('Rename'),
                 onPressed: () => _rename(_selectedEntries.first)),
           IconButton(
               icon: const Icon(Icons.delete_outline, color: AppColors.danger),
-              tooltip: 'Delete',
+              tooltip: tr('Delete'),
               onPressed: _selected.isEmpty ? null : _deleteSelected),
         ],
       );
@@ -264,7 +266,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
                   size: 16,
                   color: on ? AppColors.accent : AppColors.textSecondary),
               const SizedBox(width: 6),
-              Text(label,
+              Text(tr(label),
                   style: AppTypography.caption.copyWith(
                       color: on ? AppColors.accent : AppColors.textPrimary,
                       fontWeight: FontWeight.w600)),
@@ -282,16 +284,16 @@ class _FileTransferPageState extends State<FileTransferPage> {
           children: [
             IconButton(
               icon: const Icon(Icons.storage_outlined, size: 20),
-              tooltip: _isLocal ? 'Home' : 'Drives',
+              tooltip: _isLocal ? tr('Home') : tr('Drives'),
               onPressed: () => _ft.goHome(onRemote: !_isLocal),
             ),
             IconButton(
               icon: const Icon(Icons.arrow_upward, size: 20),
-              tooltip: 'Up',
+              tooltip: tr('Up'),
               onPressed: () => _isLocal ? _ft.upLocal() : _ft.upRemote(),
             ),
             Expanded(
-              child: Text(_listing.path.isEmpty ? 'Drives' : _listing.path,
+              child: Text(_listing.path.isEmpty ? tr('Drives') : _listing.path,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.caption),
@@ -309,7 +311,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
           children: [
             const CircularProgressIndicator(color: AppColors.accent),
             const SizedBox(height: Dimens.s12),
-            Text(_isLocal ? 'Reading files…' : 'Connecting…',
+            Text(_isLocal ? tr('Reading files…') : tr('Connecting…'),
                 style: AppTypography.caption),
           ],
         ),
@@ -320,8 +322,8 @@ class _FileTransferPageState extends State<FileTransferPage> {
           ? a.name.toLowerCase().compareTo(b.name.toLowerCase())
           : (a.isDir ? -1 : 1));
     if (entries.isEmpty) {
-      return const Center(
-          child: Text('Empty folder', style: AppTypography.caption));
+      return Center(
+          child: Text(tr('Empty folder'), style: AppTypography.caption));
     }
     return ListView.builder(
       itemCount: entries.length,
@@ -388,14 +390,14 @@ class _FileTransferPageState extends State<FileTransferPage> {
                     if (j.state == TransferState.paused)
                       IconButton(
                         icon: const Icon(Icons.play_arrow, size: 18),
-                        tooltip: 'Resume',
+                        tooltip: tr('Resume'),
                         onPressed: () => _ft.resumeJob(j.id),
                       ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 18),
                       tooltip: j.state == TransferState.running
-                          ? 'Cancel'
-                          : 'Remove',
+                          ? tr('Cancel')
+                          : tr('Remove'),
                       onPressed: () => _ft.cancelJob(j.id),
                     ),
                   ],

@@ -6,7 +6,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:neodesk_core/neodesk_core.dart' show ConfigKeys;
+import 'package:neodesk_core/neodesk_core.dart'
+    show ConfigKeys, AppLocale, appLocale, applyLocale;
 import 'package:neodesk_core/ui/home/app_lock_gate.dart';
 import 'package:neodesk_core/ui/home/home_shell.dart';
 import 'package:neodesk_core/ui/session/canvas_override.dart';
@@ -95,6 +96,7 @@ void setupNeodesk() {
   final lang = neodeskCore.config.get(ConfigKeys.language, defaultValue: 'system');
   bind.mainSetLocalOption(
       key: kCommConfKeyLang, value: lang == 'system' ? '' : lang);
+  applyLocale(lang); // drive neodesk's own UI language (zh / ja)
   neodeskFrameOverride = (context) => const RustdeskFrameWidget();
   neodeskCanvasOverride = _RustdeskCanvasControl();
   neodeskCursorOverride = _RustdeskCursorControl();
@@ -168,11 +170,15 @@ class NeodeskEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: AppTheme.dark(),
-      child: AppLockGate(
-        core: neodeskCore,
-        child: HomeShell(core: neodeskCore),
+    // Rebuild the whole neodesk UI when the Language setting changes.
+    return ValueListenableBuilder<AppLocale>(
+      valueListenable: appLocale,
+      builder: (context, _, __) => Theme(
+        data: AppTheme.dark(),
+        child: AppLockGate(
+          core: neodeskCore,
+          child: HomeShell(core: neodeskCore),
+        ),
       ),
     );
   }

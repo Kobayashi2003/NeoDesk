@@ -68,7 +68,7 @@ class _DevicesPageState extends State<DevicesPage> {
     final alias = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename device'),
+        title: Text(tr('Rename device')),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -77,10 +77,10 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Save')),
+              child: Text(tr('Save'))),
         ],
       ),
     );
@@ -100,16 +100,16 @@ class _DevicesPageState extends State<DevicesPage> {
               ]),
             ),
             _sheetItem(
-                ctx, Icons.cast, 'Remote control', () => _connect(peer.id)),
-            _sheetItem(ctx, Icons.folder_outlined, 'File transfer',
+                ctx, Icons.cast, tr('Remote control'), () => _connect(peer.id)),
+            _sheetItem(ctx, Icons.folder_outlined, tr('File transfer'),
                 () => _openFiles(peer.id)),
-            _sheetItem(ctx, Icons.terminal, 'Terminal',
+            _sheetItem(ctx, Icons.terminal, tr('Terminal'),
                 () => widget.core.openTerminal(context, peer.id)),
-            _sheetItem(ctx, Icons.star_outline, 'Add to favorites',
+            _sheetItem(ctx, Icons.star_outline, tr('Add to favorites'),
                 () => widget.core.peers.addFavorite(peer.id)),
-            _sheetItem(ctx, Icons.drive_file_rename_outline, 'Rename',
+            _sheetItem(ctx, Icons.drive_file_rename_outline, tr('Rename'),
                 () => _renamePeer(peer)),
-            _sheetItem(ctx, Icons.delete_outline, 'Delete', () {
+            _sheetItem(ctx, Icons.delete_outline, tr('Delete'), () {
               widget.core.peers.forget(peer.id);
             }, danger: true),
             const SizedBox(height: Dimens.s8),
@@ -140,7 +140,7 @@ class _DevicesPageState extends State<DevicesPage> {
           SliverToBoxAdapter(child: _header()),
           SliverToBoxAdapter(child: _connectBar()),
           SliverToBoxAdapter(child: _favoritesShelf()),
-          const SliverToBoxAdapter(child: SectionHeader(title: 'Recent')),
+          SliverToBoxAdapter(child: SectionHeader(title: tr('Recent'))),
           _recentList(),
           SliverToBoxAdapter(child: _lanSection()),
           const SliverToBoxAdapter(child: SizedBox(height: Dimens.s32)),
@@ -154,15 +154,15 @@ class _DevicesPageState extends State<DevicesPage> {
             Dimens.pageInset, Dimens.s16, Dimens.s8, 0),
         child: Row(
           children: [
-            const Text('Devices', style: AppTypography.display),
+            Text(tr('Devices'), style: AppTypography.display),
             const Spacer(),
             IconButton(
                 onPressed: _scan,
-                tooltip: 'Scan device QR',
+                tooltip: tr('Scan device QR'),
                 icon: const Icon(Icons.qr_code_scanner)),
             IconButton(
                 onPressed: () => _idFocus.requestFocus(),
-                tooltip: 'Enter ID',
+                tooltip: tr('Enter ID'),
                 icon: const Icon(Icons.add)),
           ],
         ),
@@ -186,18 +186,19 @@ class _DevicesPageState extends State<DevicesPage> {
                   style: AppTypography.mono,
                   textInputAction: TextInputAction.go,
                   onSubmitted: _connect,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Enter device ID',
-                    hintStyle: TextStyle(color: AppColors.textDisabled),
-                    icon: Icon(Icons.search, color: AppColors.textSecondary),
+                    hintText: tr('Enter device ID'),
+                    hintStyle: const TextStyle(color: AppColors.textDisabled),
+                    icon: const Icon(Icons.search,
+                        color: AppColors.textSecondary),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: Dimens.s12),
             PillButton(
-                label: 'Connect', onPressed: () => _connect(_idCtrl.text)),
+                label: tr('Connect'), onPressed: () => _connect(_idCtrl.text)),
           ],
         ),
       );
@@ -210,7 +211,7 @@ class _DevicesPageState extends State<DevicesPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader(title: 'Favorites'),
+              SectionHeader(title: tr('Favorites')),
               SizedBox(
                 height: 148,
                 child: ListView.builder(
@@ -234,11 +235,11 @@ class _DevicesPageState extends State<DevicesPage> {
         builder: (context, snap) {
           final items = snap.data ?? const [];
           if (items.isEmpty) {
-            return const SliverToBoxAdapter(
+            return SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.all(Dimens.s24),
+                padding: const EdgeInsets.all(Dimens.s24),
                 child: Center(
-                    child: Text('No recent connections yet',
+                    child: Text(tr('No recent connections yet'),
                         style: AppTypography.caption)),
               ),
             );
@@ -262,7 +263,7 @@ class _DevicesPageState extends State<DevicesPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionHeader(
-                title: 'LAN devices',
+                title: tr('LAN devices'),
                 trailing: IconButton(
                   icon: Icon(
                       _lanExpanded ? Icons.expand_less : Icons.expand_more),

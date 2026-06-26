@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neodesk_core/neodesk_core.dart' show tr, trArg;
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -98,7 +99,8 @@ void showGestureHelp(BuildContext context, InteractionUiMode mode) {
               Row(children: [
                 const Icon(Icons.gesture, color: AppColors.accent),
                 const SizedBox(width: Dimens.s8),
-                Text('${mode.label} gestures', style: AppTypography.title),
+                Text(trArg('{} gestures', mode.label),
+                    style: AppTypography.title),
               ]),
               const SizedBox(height: Dimens.s16),
               ...rows.map((r) => Padding(
@@ -112,8 +114,8 @@ void showGestureHelp(BuildContext context, InteractionUiMode mode) {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(r.gesture, style: AppTypography.body),
-                            Text(r.result, style: AppTypography.caption),
+                            Text(tr(r.gesture), style: AppTypography.body),
+                            Text(tr(r.result), style: AppTypography.caption),
                           ],
                         ),
                       ),
