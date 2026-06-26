@@ -63,13 +63,6 @@ abstract interface class NeodeskCore {
   /// else a RustDesk code like `en` / `zh-cn`). No-op in demo.
   Future<void> setLanguage(String lang);
 
-  /// The most recent clipboard text the connected peer pushed this session, or
-  /// null if none has arrived yet. Lets the UI offer an explicit "copy the
-  /// remote's clipboard onto this phone" action. (The engine also mirrors it to
-  /// the system clipboard automatically when clipboard sync is enabled.) Null in
-  /// demo. Requires the `enable-clipboard` session option.
-  String? get remoteClipboardText;
-
   /// Prompt the device unlock (biometric / PIN / pattern) for the app lock.
   /// Returns true if confirmed; false if cancelled or no secure lock is set.
   /// Returns true in demo (no lock).

@@ -63,4 +63,8 @@ abstract final class ConfigKeys {
 
   /// Require a device unlock (biometric / PIN) to open the app (bool).
   static const appLock = 'neodesk.applock';
+
+  /// Detail level of the in-session quality-monitor overlay
+  /// (`simple` = FPS + delay; `detailed` = + bitrate, network speed, codec).
+  static const qualityMonitorDetail = 'neodesk.qualitymonitor.detail';
 }

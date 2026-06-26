@@ -62,9 +62,6 @@ class FakeCore implements NeodeskCore {
   Future<void> setLanguage(String lang) async {}
 
   @override
-  String? get remoteClipboardText => null;
-
-  @override
   Future<bool> authenticateAppLock() async => true;
 
   @override

@@ -46,6 +46,15 @@ class _SettingsPageState extends State<SettingsPage> {
     (label: 'Medium', value: 'medium', sub: null),
     (label: 'Large', value: 'large', sub: null),
   ];
+  // In-session quality-monitor overlay verbosity.
+  static const _qualityDetails = <_Option>[
+    (label: 'Simple', value: 'simple', sub: 'FPS and delay'),
+    (
+      label: 'Detailed',
+      value: 'detailed',
+      sub: 'FPS, delay, bitrate, speed, codec'
+    ),
+  ];
   // Engine dialog language (the neodesk UI itself stays English).
   static const _languages = <_Option>[
     (label: 'Follow system', value: 'system', sub: null),
@@ -90,6 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _volumeDown;
   late String _language;
   late bool _appLock;
+  late String _qualityDetail;
 
   /// Which slider row is currently expanded (accordion; null = all collapsed).
   /// Sliders are hidden behind a tap so the list stays compact.
@@ -118,6 +128,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
     _appLock = _cfg.getBool(ConfigKeys.appLock);
+    _qualityDetail =
+        _cfg.get(ConfigKeys.qualityMonitorDetail, defaultValue: 'simple');
     // Show the real installed version (Android's versionName), not the
     // compile-time constant, which can drift from the built APK.
     _version = kNeodeskVersion;
@@ -412,6 +424,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() => _language = v);
                   widget.core.setLanguage(v); // engine dialogs, going forward
                 })),
+            _row(Icons.speed_outlined, 'Quality monitor',
+                value: _labelOf(_qualityDetails, _qualityDetail),
+                onTap: () => _pickOption(
+                    'Quality monitor',
+                    _qualityDetails,
+                    ConfigKeys.qualityMonitorDetail,
+                    _qualityDetail,
+                    (v) => setState(() => _qualityDetail = v))),
             _switchRow(
                 Icons.lock_outline, 'App lock (require unlock)', _appLock,
                 (v) async {

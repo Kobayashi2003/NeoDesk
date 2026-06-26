@@ -38,6 +38,8 @@ class SessionController extends ChangeNotifier {
     scrollStep = _readDouble(ConfigKeys.scrollStep, 24);
     scrollStripVisible = core.config.getBool(ConfigKeys.scrollStrip);
     edgePanSpeed = _readEdgePanSpeed();
+    qualityMonitorDetailed =
+        core.config.get(ConfigKeys.qualityMonitorDetail) == 'detailed';
     currentDisplay = 0;
     _phaseSub = session.phase.listen((p) {
       phase = p;
@@ -116,6 +118,9 @@ class SessionController extends ChangeNotifier {
   late double zoomMax;
   late double scrollStep;
   late double edgePanSpeed;
+
+  /// Quality-monitor overlay verbosity (false = simple FPS+delay, true = full).
+  late bool qualityMonitorDetailed;
 
   /// Multi-monitor: index of the display currently shown.
   int currentDisplay = 0;
@@ -597,8 +602,11 @@ class SessionController extends ChangeNotifier {
   QualityStats? quality;
 
   Future<void> _loadSessionToggles() async {
-    clipboardEnabled = await session.getToggleOption('enable-clipboard');
-    audioEnabled = await session.getToggleOption('enable-audio');
+    // The engine's live per-session options are the *inverted* `disable-*` ones
+    // (the `enable-*` keys are global defaults and don't affect the running
+    // stream). So a session has audio/clipboard on unless explicitly disabled.
+    clipboardEnabled = !await session.getToggleOption('disable-clipboard');
+    audioEnabled = !await session.getToggleOption('disable-audio');
     viewOnly = await session.getToggleOption('view-only');
     qualityMonitorOn = await session.getToggleOption('show-quality-monitor');
     notifyListeners();
@@ -628,13 +636,13 @@ class SessionController extends ChangeNotifier {
 
   void toggleClipboard() {
     clipboardEnabled = !clipboardEnabled;
-    session.setToggleOption('enable-clipboard', clipboardEnabled);
+    session.setToggleOption('disable-clipboard', !clipboardEnabled);
     notifyListeners();
   }
 
   void toggleAudio() {
     audioEnabled = !audioEnabled;
-    session.setToggleOption('enable-audio', audioEnabled);
+    session.setToggleOption('disable-audio', !audioEnabled);
     notifyListeners();
   }
 

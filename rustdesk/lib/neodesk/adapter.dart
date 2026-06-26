@@ -20,7 +20,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'clipboard_hook.dart';
 import 'scan_page.dart';
 import 'terminal_page.dart';
 
@@ -68,15 +67,7 @@ class RustdeskCore implements nd.NeodeskCore {
         },
       ));
     });
-    // Capture the peer's pushed clipboard so the UI can offer an explicit
-    // "Copy remote clipboard" (the engine also auto-sets the system clipboard).
-    neodeskRemoteClipboardHook = (t) => _lastRemoteClipboard = t;
   }
-
-  String? _lastRemoteClipboard;
-
-  @override
-  String? get remoteClipboardText => _lastRemoteClipboard;
 
   final _RustdeskSessionFactory _factory;
   final _RustdeskFileTransferFactory _files;

@@ -244,7 +244,8 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
               fps: d.fps,
               bitrate: d.targetBitrate,
               delay: d.delay,
-              codec: d.codecFormat));
+              codec: d.codecFormat,
+              speed: d.speed));
         }
       };
       gFFI.qualityMonitorModel.addListener(_qualityListener!);

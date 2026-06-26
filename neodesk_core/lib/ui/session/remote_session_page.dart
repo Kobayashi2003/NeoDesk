@@ -236,10 +236,15 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Simple = the two numbers you actually watch (smoothness + lag);
+              // Detailed = the full stat block.
               _qLine('FPS', q?.fps),
-              _qLine('Bitrate', q?.bitrate),
               _qLine('Delay', q?.delay),
-              _qLine('Codec', q?.codec),
+              if (_c.qualityMonitorDetailed) ...[
+                _qLine('Bitrate', q?.bitrate),
+                _qLine('Speed', q?.speed),
+                _qLine('Codec', q?.codec),
+              ],
             ],
           ),
         ),

@@ -90,12 +90,14 @@ abstract final class ImageQuality {
 /// A snapshot of live connection quality (all strings, as the engine reports
 /// them; any may be null before the first sample).
 class QualityStats {
-  const QualityStats({this.fps, this.bitrate, this.delay, this.codec});
+  const QualityStats(
+      {this.fps, this.bitrate, this.delay, this.codec, this.speed});
 
   final String? fps;
   final String? bitrate; // target bitrate
   final String? delay; // network delay, ms
   final String? codec;
+  final String? speed; // network throughput
 }
 
 /// Creates/owns [RemoteSession] instances. Mirrors how RustDesk constructs a
