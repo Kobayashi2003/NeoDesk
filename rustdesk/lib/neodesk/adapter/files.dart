@@ -216,8 +216,20 @@ class _RustdeskFileTransfer implements nd.FileTransfer {
   }
 
   @override
-  Future<void> cancelJob(int id) =>
-      gFFI.fileModel.jobController.cancelJob(id);
+  Future<void> cancelJob(int id) async {
+    final jc = gFFI.fileModel.jobController;
+    final idx = jc.getJob(id);
+    // A finished/failed job (e.g. a download interrupted by a drop) can't be
+    // "cancelled" on the engine — sessionCancelJob is a no-op for it, so tapping
+    // ✗ did nothing and it lingered. Drop it from the table directly instead.
+    if (idx >= 0 &&
+        (jc.jobTable[idx].state == JobState.error ||
+            jc.jobTable[idx].state == JobState.done)) {
+      jc.jobTable.removeAt(idx); // observable → re-emits the jobs list
+      return;
+    }
+    await jc.cancelJob(id);
+  }
 
   @override
   Future<void> resumeJob(int id) async =>

@@ -228,6 +228,7 @@ const Map<String, String> _zh = {
   'Two-finger tap': '双指轻点',
   'Two-finger vertical drag': '双指垂直拖动',
   'Zoom view': '缩放画面',
+  'Paste': '粘贴',
 };
 
 const Map<String, String> _ja = {
@@ -412,4 +413,5 @@ const Map<String, String> _ja = {
   'Two-finger tap': '2 本指タップ',
   'Two-finger vertical drag': '2 本指の垂直ドラッグ',
   'Zoom view': '画面をズーム',
+  'Paste': '貼り付け',
 };

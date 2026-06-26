@@ -193,17 +193,14 @@ class _FileTransferPageState extends State<FileTransferPage> {
               onPressed: _newFolder),
           IconButton(
               icon: const Icon(Icons.refresh), onPressed: () => _ft.refresh()),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'hidden') _toggleHidden();
-            },
-            itemBuilder: (_) => [
-              CheckedPopupMenuItem(
-                value: 'hidden',
-                checked: _showHidden[_tab],
-                child: Text(tr('Show hidden files')),
-              ),
-            ],
+          // Direct toggle (accent when on) instead of a hidden popup checkbox.
+          IconButton(
+            icon: Icon(_showHidden[_tab]
+                ? Icons.visibility
+                : Icons.visibility_off_outlined),
+            color: _showHidden[_tab] ? AppColors.accent : null,
+            tooltip: tr('Show hidden files'),
+            onPressed: _toggleHidden,
           ),
         ],
       );

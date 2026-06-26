@@ -57,6 +57,9 @@ class _TouchPadState extends State<TouchPad> {
 
   // Multi-finger state.
   int _twoClass = 0; // 0 = unclassified, 1 = zoom, 2 = pan, 3 = scroll
+  // When the 2nd finger landed — two-finger actions are withheld for a short
+  // settle window so a quickly-following 3rd/4th finger pre-empts them.
+  DateTime _twoStart = DateTime.now();
   double _startDist = 0;
   double _lastDist = 0;
   Offset _startCentroid = Offset.zero;
@@ -121,6 +124,7 @@ class _TouchPadState extends State<TouchPad> {
       _twoClass = 0;
       _scrollAccum = 0;
       if (_fingers.length == 2) {
+        _twoStart = DateTime.now();
         final (a, b) = _twoPositions();
         _startDist = _lastDist = (a - b).distance;
         _startA = a;
@@ -201,6 +205,15 @@ class _TouchPadState extends State<TouchPad> {
     final dist = (a - b).distance;
     final centroid = (a + b) / 2;
 
+    // Settle window: track positions but apply nothing (and don't accrue travel
+    // / zoom deviation) yet, so a 3rd/4th finger landing a beat later isn't
+    // pre-empted by a transient two-finger zoom — and its tap still registers.
+    if (DateTime.now().difference(_twoStart) < kMultiTouchSettle) {
+      _lastDist = dist;
+      _lastCentroid = centroid;
+      return;
+    }
+
     if (_twoClass == 0) {
       _twoClass = _classifyTwoFinger(a, b, dist, centroid);
     }
@@ -272,6 +285,7 @@ class _TouchPadState extends State<TouchPad> {
     if (_fingers.isNotEmpty) {
       _lastCentroid = _centroid();
       if (_fingers.length == 2) {
+        _twoStart = DateTime.now();
         final (a, b) = _twoPositions();
         _startDist = _lastDist = (a - b).distance;
         _startCentroid = _lastCentroid;

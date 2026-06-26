@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard;
 import 'package:xterm/xterm.dart';
+import 'package:neodesk_core/neodesk_core.dart' show tr;
 import 'package:neodesk_core/ui/theme/app_colors.dart';
 
 import '../models/model.dart' show FFI;
@@ -29,6 +33,14 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
   static const _terminalId = 0;
   late final FFI _ffi;
   late final TerminalModel _model;
+  final _focusNode = FocusNode();
+
+  /// Sticky Ctrl: when armed, the next typed character is sent as its control
+  /// code (so Ctrl+anything works from the soft keyboard, not just preset combos).
+  bool _ctrlArmed = false;
+  double _fontSize = 14;
+  bool _opened = false;
+  Timer? _openPoll;
 
   @override
   void initState() {
@@ -44,31 +56,110 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
     );
     _model = TerminalModel(_ffi, _terminalId);
     _ffi.registerTerminalModel(_terminalId, _model);
+
+    // Wrap the terminal's input so a sticky Ctrl can transform the next char.
+    final original = _model.terminal.onOutput;
+    _model.terminal.onOutput = (data) {
+      if (_ctrlArmed) {
+        _ctrlArmed = false;
+        // Un-highlight the Ctrl chip after this frame (we're mid-input here).
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {});
+        });
+        if (data.length == 1) data = _toCtrl(data);
+      }
+      original?.call(data);
+    };
+
+    // Surface a "Connecting…" bar until the remote shell is open (give up after
+    // ~12s so a failed connect doesn't leave the bar — and the timer — running).
+    var polls = 0;
+    _openPoll = Timer.periodic(const Duration(milliseconds: 300), (t) {
+      if (_model.terminalOpened || ++polls > 40) {
+        t.cancel();
+        if (mounted) setState(() => _opened = true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _openPoll?.cancel();
+    _focusNode.dispose();
     _ffi.unregisterTerminalModel(_terminalId);
     _model.dispose();
     TerminalConnectionManager.releaseConnection(widget.id);
     super.dispose();
   }
 
+  /// Map a printable char to its control code (Ctrl+C → 0x03, etc.).
+  String _toCtrl(String ch) {
+    final c = ch.codeUnitAt(0);
+    if (c >= 0x40 && c < 0x80) return String.fromCharCode(c & 0x1f);
+    return ch;
+  }
+
+  void _toggleKeyboard() {
+    if (_focusNode.hasFocus) {
+      _focusNode.unfocus();
+    } else {
+      _focusNode.requestFocus();
+    }
+  }
+
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text ?? '';
+    if (text.isNotEmpty) _model.sendVirtualKey(text);
+  }
+
+  void _setFont(double delta) =>
+      setState(() => _fontSize = (_fontSize + delta).clamp(9.0, 26.0));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      appBar: AppBar(title: Text('Terminal · ${widget.id}')),
+      appBar: AppBar(
+        title: Text('${tr('Terminal')} · ${widget.id}'),
+        actions: [
+          IconButton(
+              tooltip: 'A-',
+              onPressed: () => _setFont(-1),
+              icon: const Icon(Icons.text_decrease)),
+          IconButton(
+              tooltip: 'A+',
+              onPressed: () => _setFont(1),
+              icon: const Icon(Icons.text_increase)),
+          IconButton(
+              tooltip: tr('Paste'),
+              onPressed: _paste,
+              icon: const Icon(Icons.content_paste)),
+          IconButton(
+              tooltip: tr('Keyboard'),
+              onPressed: _toggleKeyboard,
+              icon: const Icon(Icons.keyboard)),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
+            if (!_opened)
+              const LinearProgressIndicator(
+                  minHeight: 2,
+                  backgroundColor: AppColors.bgElevated1,
+                  color: AppColors.accent),
             Expanded(
+              // TerminalView handles its own tap (focus + cursor/selection); the
+              // keyboard button covers explicit show/hide. No outer GestureDetector
+              // (it would compete in the gesture arena and swallow taps).
               child: TerminalView(
                 _model.terminal,
                 controller: _model.terminalController,
+                focusNode: _focusNode,
                 autofocus: true,
                 backgroundOpacity: 0, // show the neodesk scaffold colour
-                textStyle: const TerminalStyle(fontSize: 13),
+                textStyle: TerminalStyle(fontSize: _fontSize),
                 padding: const EdgeInsets.all(8),
               ),
             ),
@@ -85,8 +176,6 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
     ('Esc', '\x1B'),
     ('Tab', '\t'),
     ('^C', '\x03'),
-    ('^D', '\x04'),
-    ('^Z', '\x1A'),
     ('←', '\x1B[D'),
     ('↑', '\x1B[A'),
     ('↓', '\x1B[B'),
@@ -103,30 +192,36 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
           color: AppColors.bgElevated1,
           border: Border(top: BorderSide(color: AppColors.divider)),
         ),
-        child: ListView.separated(
+        child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          itemCount: _keys.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 6),
-          itemBuilder: (_, i) {
-            final (label, seq) = _keys[i];
-            return GestureDetector(
-              onTap: () => _model.sendVirtualKey(seq),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.bgElevated2,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(label,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
-              ),
-            );
-          },
+          children: [
+            // Sticky Ctrl: arm, then type a letter (or use the keys below).
+            _key('Ctrl', () => setState(() => _ctrlArmed = !_ctrlArmed),
+                active: _ctrlArmed),
+            for (final (label, seq) in _keys) ...[
+              const SizedBox(width: 6),
+              _key(label, () => _model.sendVirtualKey(seq)),
+            ],
+          ],
+        ),
+      );
+
+  Widget _key(String label, VoidCallback onTap, {bool active = false}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: active ? AppColors.accent : AppColors.bgElevated2,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: active ? AppColors.textOnAccent : AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
         ),
       );
 }

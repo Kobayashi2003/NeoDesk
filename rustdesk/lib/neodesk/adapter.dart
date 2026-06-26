@@ -186,6 +186,11 @@ class RustdeskCore implements nd.NeodeskCore {
           '${dir.path}/neodesk-update-${DateTime.now().millisecondsSinceEpoch}.apk');
       final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) return false;
+      // Reject a non-APK body — e.g. the GitHub release web page, which is what
+      // the URL points to when the release has no .apk asset yet. Installing it
+      // shows "corrupt package"; instead fail so the caller opens the browser.
+      final ctype = (resp.headers['content-type'] ?? '').toLowerCase();
+      if (ctype.contains('html') || ctype.contains('json')) return false;
       final total = resp.contentLength ?? 0;
       final sink = file.openWrite();
       var received = 0;
@@ -195,6 +200,13 @@ class RustdeskCore implements nd.NeodeskCore {
         onProgress?.call(received, total);
       }
       await sink.close();
+      // Sanity-check the download: a real APK is a ZIP ("PK\x03\x04") and, when
+      // the length is advertised, must be complete (guards a truncated download).
+      if (total > 0 && received != total) return false;
+      final raf = await file.open();
+      final magic = await raf.read(4);
+      await raf.close();
+      if (magic.length < 4 || magic[0] != 0x50 || magic[1] != 0x4B) return false;
       // Native side resolves a FileProvider URI and launches the package installer.
       final ok = await _installChannel
           .invokeMethod<bool>('install', {'path': file.path});

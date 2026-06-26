@@ -60,6 +60,9 @@ class _PointerPadState extends State<PointerPad> {
   double _lastDist = 0;
   Offset _startMid = Offset.zero;
   Offset _lastMid = Offset.zero;
+  // When the 2nd finger landed — two-finger actions are withheld for a short
+  // settle window so a quickly-following 3rd/4th finger pre-empts them.
+  DateTime _twoStart = DateTime.now();
   // Each finger's start position, to tell a pinch (fingers move oppositely) from
   // a pan/scroll (fingers move together).
   Offset _startP0 = Offset.zero;
@@ -115,6 +118,7 @@ class _PointerPadState extends State<PointerPad> {
         _twoClassified = false;
         _twoMode = 0;
         _scrollAccum = 0;
+        _twoStart = DateTime.now();
         final p = _fingers.values.toList();
         _startDist = _lastDist = (p[0].pos - p[1].pos).distance;
         _startMid = _lastMid = (p[0].pos + p[1].pos) / 2;
@@ -201,6 +205,14 @@ class _PointerPadState extends State<PointerPad> {
     final dist = (p[0].pos - p[1].pos).distance;
     final mid = (p[0].pos + p[1].pos) / 2;
     final dMid = mid - _lastMid;
+
+    // Settle window: track positions but apply nothing yet, so a 3rd/4th finger
+    // landing a beat later isn't pre-empted by a transient two-finger zoom/pan.
+    if (DateTime.now().difference(_twoStart) < kMultiTouchSettle) {
+      _lastDist = dist;
+      _lastMid = mid;
+      return;
+    }
 
     // Classify once via the shared relative-motion classifier (pinch = fingers
     // move oppositely; pan/scroll = together). Stops a pinch's centroid drift

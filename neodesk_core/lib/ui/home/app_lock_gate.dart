@@ -19,17 +19,40 @@ class AppLockGate extends StatefulWidget {
   State<AppLockGate> createState() => _AppLockGateState();
 }
 
-class _AppLockGateState extends State<AppLockGate> {
+class _AppLockGateState extends State<AppLockGate>
+    with WidgetsBindingObserver {
   bool _unlocked = false;
   bool _authing = false;
+
+  bool get _lockEnabled => widget.core.config.getBool(ConfigKeys.appLock);
 
   @override
   void initState() {
     super.initState();
-    if (!widget.core.config.getBool(ConfigKeys.appLock)) {
+    WidgetsBinding.instance.addObserver(this);
+    if (!_lockEnabled) {
       _unlocked = true;
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) => _authenticate());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_lockEnabled || _authing) return;
+    // Re-lock whenever we leave the foreground, then re-prompt on return — so a
+    // once-unlocked app doesn't stay open across app switches. The auth prompt
+    // itself backgrounds us, but [_authing] guards that above.
+    if (state == AppLifecycleState.paused && _unlocked) {
+      setState(() => _unlocked = false);
+    } else if (state == AppLifecycleState.resumed && !_unlocked) {
+      _authenticate();
     }
   }
 
