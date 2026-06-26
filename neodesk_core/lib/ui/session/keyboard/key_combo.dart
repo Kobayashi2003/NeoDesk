@@ -58,8 +58,9 @@ abstract final class ComboStore {
         KeyCombo(label: 'Ctrl+A', mods: {'ctrl'}, key: 'VK_A'),
         KeyCombo(label: 'Ctrl+S', mods: {'ctrl'}, key: 'VK_S'),
         KeyCombo(label: 'Alt+Tab', mods: {'alt'}, key: 'VK_TAB'),
-        KeyCombo(
-            label: 'Ctrl+Alt+Del', mods: {'ctrl', 'alt'}, key: 'VK_DELETE'),
+        // Note: no Ctrl+Alt+Del here — injected as regular keys it doesn't reach
+        // the secure attention desktop. The More menu's dedicated action (the
+        // engine's sessionCtrlAltDel) is the one that actually works.
         KeyCombo(label: 'Win+D', mods: {'meta'}, key: 'VK_D'),
       ];
 }

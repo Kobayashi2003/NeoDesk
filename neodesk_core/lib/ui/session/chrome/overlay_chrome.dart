@@ -87,6 +87,10 @@ class OverlayChrome extends StatelessWidget {
                 child: Text(peerName,
                     style: AppTypography.body, overflow: TextOverflow.ellipsis),
               ),
+              // Quick monitor switcher — only when the peer has >1 display.
+              if ((controller.peer?.displayCount ?? 1) > 1)
+                _zoomButton(Icons.monitor, 'Display',
+                    () => _displaySheet(context, controller.peer!.displayCount)),
               _zoomButton(Icons.fit_screen, 'Fit', controller.fitCanvas),
               _zoomButton(
                   Icons.center_focus_strong, '1:1', controller.nativeCanvas),
@@ -221,124 +225,178 @@ class OverlayChrome extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            if (displays > 1) _displayPicker(ctx, displays),
-            ListTile(
-              leading: const Icon(Icons.hd_outlined,
-                  color: AppColors.textSecondary),
-              title: const Text('Image quality'),
-              trailing: Text(controller.imageQuality,
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.accent)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _quality(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.tune, color: AppColors.textSecondary),
-              title: const Text('Custom quality'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _customQuality(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.video_settings_outlined,
-                  color: AppColors.textSecondary),
-              title: const Text('Codec'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _codec(context);
-              },
-            ),
-            if (!isAndroid)
-              ListTile(
-                leading: const Icon(Icons.aspect_ratio_outlined,
-                    color: AppColors.textSecondary),
-                title: const Text('Resolution'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _resolution(context);
-                },
-              ),
-            _toggleTile(ctx, 'Scroll strip', controller.scrollStripVisible,
-                controller.toggleScrollStrip),
-            _toggleTile(ctx, 'Sync clipboard', controller.clipboardEnabled,
-                controller.toggleClipboard),
-            _toggleTile(ctx, 'Play remote audio', controller.audioEnabled,
-                controller.toggleAudio),
-            _toggleTile(ctx, 'View only (no input)', controller.viewOnly,
-                controller.toggleViewOnly),
-            _toggleTile(ctx, 'Quality monitor', controller.qualityMonitorOn,
-                controller.toggleQualityMonitor),
-            ListTile(
-              leading: const Icon(Icons.picture_in_picture_alt_outlined,
-                  color: AppColors.textSecondary),
-              title: const Text('Small window (PiP)'),
-              subtitle: const Text('Keep streaming over other apps',
-                  style: AppTypography.caption),
-              onTap: () {
-                Navigator.pop(ctx);
+              // ---- Display (multi-monitor only) ----
+              if (displays > 1)
+                _actionTile(ctx, Icons.monitor, 'Display',
+                    trailing: '${controller.currentDisplay + 1} / $displays',
+                    onTap: () => _displaySheet(context, displays)),
+
+              // ---- Video ----
+              _sheetHeader('Video'),
+              _actionTile(ctx, Icons.hd_outlined, 'Quality',
+                  trailing: _qualityLabel(controller.imageQuality),
+                  onTap: () => _qualityMenu(context)),
+              _actionTile(ctx, Icons.video_settings_outlined, 'Codec',
+                  onTap: () => _codec(context)),
+              if (!isAndroid)
+                _actionTile(ctx, Icons.aspect_ratio_outlined, 'Resolution',
+                    onTap: () => _resolution(context)),
+
+              // ---- Session toggles ----
+              _sheetHeader('Session'),
+              _toggleTile(ctx, 'Sync clipboard', controller.clipboardEnabled,
+                  controller.toggleClipboard),
+              _toggleTile(ctx, 'Play remote audio', controller.audioEnabled,
+                  controller.toggleAudio),
+              _toggleTile(ctx, 'View only (no input)', controller.viewOnly,
+                  controller.toggleViewOnly),
+              _toggleTile(ctx, 'Quality monitor', controller.qualityMonitorOn,
+                  controller.toggleQualityMonitor),
+              _toggleTile(ctx, 'Scroll strip', controller.scrollStripVisible,
+                  controller.toggleScrollStrip),
+
+              // ---- Remote actions (desktop targets only) ----
+              if (!isAndroid) ...[
+                _sheetHeader('Remote'),
+                _actionTile(ctx, Icons.keyboard, 'Ctrl + Alt + Del',
+                    onTap: () => controller.ctrlAltDel()),
+                _actionTile(ctx, Icons.lock_outline, 'Lock remote screen',
+                    onTap: () => controller.lockScreen()),
+              ],
+
+              // ---- This device ----
+              _sheetHeader('This device'),
+              _actionTile(ctx, Icons.picture_in_picture_alt_outlined,
+                  'Small window (PiP)',
+                  subtitle: 'Keep streaming over other apps', onTap: () {
                 controller.setChrome(false);
                 controller.core.enterPictureInPicture();
-              },
-            ),
-            // Remote-control actions (desktop targets only).
-            if (!isAndroid) ...[
+              }),
+              _actionTile(ctx, Icons.gesture, 'Gesture help',
+                  onTap: () => showGestureHelp(context, controller.mode)),
+              if (isAndroid) ...[
+                _actionTile(ctx, Icons.arrow_back, 'Back',
+                    pop: false,
+                    onTap: () => controller.input
+                        .androidAction(AndroidSystemAction.back)),
+                _actionTile(ctx, Icons.home, 'Home',
+                    pop: false,
+                    onTap: () => controller.input
+                        .androidAction(AndroidSystemAction.home)),
+              ],
+
+              const Divider(height: 1, color: AppColors.divider),
               ListTile(
-                leading: const Icon(Icons.keyboard,
-                    color: AppColors.textSecondary),
-                title: const Text('Ctrl + Alt + Del'),
+                leading: const Icon(Icons.link_off, color: AppColors.danger),
+                title: const Text('Disconnect',
+                    style: TextStyle(color: AppColors.danger)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  controller.ctrlAltDel();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline,
-                    color: AppColors.textSecondary),
-                title: const Text('Lock remote screen'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  controller.lockScreen();
+                  onClose();
                 },
               ),
             ],
-            ListTile(
-              leading: const Icon(Icons.gesture),
-              title: const Text('Gesture help'),
-              onTap: () {
-                Navigator.pop(ctx);
-                showGestureHelp(context, controller.mode);
-              },
-            ),
-            if (isAndroid) ...[
-              ListTile(
-                  leading: const Icon(Icons.arrow_back),
-                  title: const Text('Back'),
-                  onTap: () =>
-                      controller.input.androidAction(AndroidSystemAction.back)),
-              ListTile(
-                  leading: const Icon(Icons.home),
-                  title: const Text('Home'),
-                  onTap: () =>
-                      controller.input.androidAction(AndroidSystemAction.home)),
-            ],
-            ListTile(
-              leading: const Icon(Icons.link_off, color: AppColors.danger),
-              title: const Text('Disconnect',
-                  style: TextStyle(color: AppColors.danger)),
-              onTap: () {
-                Navigator.pop(ctx);
-                onClose();
-              },
-            ),
-          ],
           ),
         ),
       ),
     );
   }
+
+  /// A small accent section label inside the More sheet.
+  Widget _sheetHeader(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            Dimens.s16, Dimens.s16, Dimens.s16, Dimens.s4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(title.toUpperCase(),
+              style: AppTypography.caption.copyWith(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8)),
+        ),
+      );
+
+  /// A More-sheet row. Closes the sheet first (unless [pop] is false, e.g. the
+  /// Android Back/Home keys, which should stay open for repeated presses).
+  Widget _actionTile(BuildContext ctx, IconData icon, String title,
+          {String? trailing,
+          String? subtitle,
+          bool pop = true,
+          required VoidCallback onTap}) =>
+      ListTile(
+        leading: Icon(icon, color: AppColors.textSecondary),
+        title: Text(title),
+        subtitle: subtitle == null
+            ? null
+            : Text(subtitle, style: AppTypography.caption),
+        trailing: trailing == null
+            ? null
+            : Text(trailing,
+                style:
+                    AppTypography.caption.copyWith(color: AppColors.accent)),
+        onTap: () {
+          if (pop) Navigator.pop(ctx);
+          onTap();
+        },
+      );
+
+  /// Short label for the current image-quality preset.
+  String _qualityLabel(String q) => switch (q) {
+        ImageQuality.best => 'Best',
+        ImageQuality.low => 'Low',
+        ImageQuality.custom => 'Custom',
+        _ => 'Balanced',
+      };
+
+  /// Merged quality picker: the three presets plus Custom (which opens the
+  /// image-quality / frame-rate sliders). Replaces the old separate
+  /// "Image quality" + "Custom quality" entries. Pops itself *before* acting so
+  /// the Custom sliders open as a fresh sheet (not popped by this one).
+  void _qualityMenu(BuildContext context) {
+    const items = {
+      ImageQuality.best: 'Best (sharpest)',
+      ImageQuality.balanced: 'Balanced',
+      ImageQuality.low: 'Low (fastest)',
+      ImageQuality.custom: 'Custom…',
+    };
+    showAppSheet(
+      context,
+      (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final e in items.entries)
+            ListTile(
+              leading: Icon(
+                e.key == controller.imageQuality
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: e.key == controller.imageQuality
+                    ? AppColors.accent
+                    : AppColors.textSecondary,
+              ),
+              title: Text(e.value, style: AppTypography.body),
+              onTap: () {
+                Navigator.pop(ctx);
+                if (e.key == ImageQuality.custom) {
+                  _customQuality(context);
+                } else {
+                  controller.setImageQuality(e.key);
+                }
+              },
+            ),
+          const SizedBox(height: Dimens.s8),
+        ],
+      ),
+    );
+  }
+
+  /// Display switcher sheet (radio list of monitors).
+  void _displaySheet(BuildContext context, int count) => _radioSheet(
+        context,
+        {for (var i = 0; i < count; i++) '$i': 'Display ${i + 1}'},
+        '${controller.currentDisplay}',
+        (k) => controller.setDisplay(int.parse(k)),
+      );
 
   /// Radio-style picker sheet: highlights [selected] of [items] (value→label).
   void _radioSheet(BuildContext context, Map<String, String> items,
@@ -453,17 +511,6 @@ class OverlayChrome extends StatelessWidget {
         ],
       );
 
-  void _quality(BuildContext context) => _radioSheet(
-        context,
-        const {
-          ImageQuality.best: 'Best (sharpest)',
-          ImageQuality.balanced: 'Balanced',
-          ImageQuality.low: 'Low (fastest)',
-        },
-        controller.imageQuality,
-        controller.setImageQuality,
-      );
-
   Widget _toggleTile(
           BuildContext ctx, String label, bool value, VoidCallback onToggle) =>
       ListTile(
@@ -474,45 +521,5 @@ class OverlayChrome extends StatelessWidget {
           onToggle();
           Navigator.pop(ctx);
         },
-      );
-
-  Widget _displayPicker(BuildContext ctx, int count) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            Dimens.s16, Dimens.s12, Dimens.s16, Dimens.s4),
-        child: Row(
-          children: [
-            const Icon(Icons.monitor, color: AppColors.textSecondary),
-            const SizedBox(width: Dimens.s12),
-            const Text('Display', style: AppTypography.body),
-            const SizedBox(width: Dimens.s16),
-            ...List.generate(count, (i) {
-              final active = controller.currentDisplay == i;
-              return Padding(
-                padding: const EdgeInsets.only(right: Dimens.s8),
-                child: GestureDetector(
-                  onTap: () {
-                    controller.setDisplay(i);
-                    Navigator.pop(ctx);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: Dimens.s12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.accent : AppColors.bgElevated2,
-                      borderRadius: BorderRadius.circular(Dimens.rChip),
-                    ),
-                    child: Text('${i + 1}',
-                        style: AppTypography.caption.copyWith(
-                          color: active
-                              ? AppColors.textOnAccent
-                              : AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        )),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
       );
 }

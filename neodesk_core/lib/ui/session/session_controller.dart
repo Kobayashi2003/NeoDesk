@@ -58,6 +58,9 @@ class SessionController extends ChangeNotifier {
     });
     _peerSub = session.peerInfo.listen((info) {
       peer = info;
+      // Keep the shown-display selection in step with the engine (it reports the
+      // actual current monitor once the handshake completes / after a switch).
+      currentDisplay = info.currentDisplay;
       notifyListeners();
     });
     _qualitySub = session.qualityStats.listen((q) {

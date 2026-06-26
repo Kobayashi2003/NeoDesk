@@ -317,10 +317,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
             child: Text('Settings', style: AppTypography.display),
           ),
-          // Control mechanics, ordered the way you'd reach for them: how you
-          // drive → pointer/zoom → scrolling → keyboard → hardware keys, then
-          // app-level (general, about).
-          _section('Controls', [
+          // Grouped by what you're adjusting: how you interact, the pointer &
+          // scrolling feel, the keyboard/keys surfaces, then app-level.
+          _section('Interaction', [
             _row(Icons.touch_app, 'Default mode',
                 value: _mode.label, onTap: _pickMode),
             _row(Icons.gesture, 'Customize gestures', onTap: () {
@@ -335,7 +334,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _cfg.setBool(ConfigKeys.hideCursorInTouch, v);
             }),
           ]),
-          _section('Pointer & zoom', [
+          _section('Pointer & scrolling', [
             _sliderRow(
                 Icons.speed,
                 'Pointer speed',
@@ -356,8 +355,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => _pickOption('Edge auto-pan speed', _edgePans,
                     ConfigKeys.edgePanSpeed, _edgePan,
                     (v) => setState(() => _edgePan = v))),
-          ]),
-          _section('Scrolling', [
             // Slider runs slow→fast; internally a smaller px-per-notch is faster.
             _sliderRow(Icons.swipe_vertical, 'Scroll speed', null,
                 _stepMin + _stepMax - _scrollStep, _stepMin, _stepMax,
@@ -370,7 +367,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _cfg.setBool(ConfigKeys.scrollInvert, v);
             }),
           ]),
-          _section('Keyboard', [
+          _section('Keyboard & keys', [
             _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => ComboSettingsPage(config: _cfg),
@@ -396,8 +393,6 @@ class _SettingsPageState extends State<SettingsPage> {
               setState(() => _keyCompact = v);
               _cfg.setBool(ConfigKeys.keyCompact, v);
             }),
-          ]),
-          _section('Volume keys', [
             _row(Icons.volume_up_outlined, 'Volume Up key',
                 value: _labelOf(_volumeActions, _volumeUp),
                 onTap: () => _pickOption('Volume Up key', _volumeActions,
