@@ -153,7 +153,7 @@ class RustdeskCore implements nd.NeodeskCore {
 
   @override
   Future<bool> downloadAndInstall(String url,
-      {void Function(double)? onProgress}) async {
+      {void Function(int received, int total)? onProgress}) async {
     final client = http.Client();
     try {
       final dir = await getTemporaryDirectory();
@@ -166,7 +166,7 @@ class RustdeskCore implements nd.NeodeskCore {
       await for (final chunk in resp.stream) {
         sink.add(chunk);
         received += chunk.length;
-        if (total > 0) onProgress?.call(received / total);
+        onProgress?.call(received, total);
       }
       await sink.close();
       // Native side resolves a FileProvider URI and launches the package installer.

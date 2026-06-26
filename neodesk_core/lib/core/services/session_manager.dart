@@ -44,10 +44,14 @@ abstract interface class NeodeskCore {
   Future<void> openExternalUrl(String url);
 
   /// Download the APK at [url] and launch the system installer, reporting
-  /// download progress (0.0–1.0) via [onProgress]. Returns false if it couldn't
-  /// download or start the installer — the caller can then fall back to
-  /// [openExternalUrl]. No-op/false off Android / in demo.
-  Future<bool> downloadAndInstall(String url, {void Function(double)? onProgress});
+  /// progress via [onProgress] as `(received, total)` bytes. [total] is 0 when
+  /// the server doesn't advertise a length (common for redirected release-asset
+  /// downloads) — callers should then show an indeterminate bar but can still
+  /// display [received]. Returns false if it couldn't download or start the
+  /// installer — the caller can then fall back to [openExternalUrl]. No-op/false
+  /// off Android / in demo.
+  Future<bool> downloadAndInstall(String url,
+      {void Function(int received, int total)? onProgress});
 
   /// Set the engine's UI language for its dialogs (`system` follows the phone,
   /// else a RustDesk code like `en` / `zh-cn`). No-op in demo.

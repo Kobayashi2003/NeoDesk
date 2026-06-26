@@ -52,7 +52,7 @@ class FakeCore implements NeodeskCore {
 
   @override
   Future<bool> downloadAndInstall(String url,
-          {void Function(double)? onProgress}) async =>
+          {void Function(int received, int total)? onProgress}) async =>
       false;
 
   @override

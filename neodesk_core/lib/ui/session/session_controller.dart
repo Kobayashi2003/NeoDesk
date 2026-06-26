@@ -41,16 +41,10 @@ class SessionController extends ChangeNotifier {
     currentDisplay = 0;
     _phaseSub = session.phase.listen((p) {
       phase = p;
-      if (p == SessionPhase.connecting) {
-        _cursorCentered = false;
-        // Re-arm the one-shot centering for the new connection.
-        _frameSub ??= frameSource.onFrame.listen((_) => _ensureCursorCentered());
-      }
       if (p == SessionPhase.connected) {
         _everConnected = true;
         reconnecting = false;
         reconnectAttempt = 0;
-        _ensureCursorCentered();
         _loadSessionToggles();
       }
       // An unexpected drop after we'd connected → auto-reconnect (vs. a
@@ -66,10 +60,6 @@ class SessionController extends ChangeNotifier {
       peer = info;
       notifyListeners();
     });
-    // Centre the cursor once the view is actually laid out. On a cold start the
-    // canvas isn't ready when `connected` fires, so retry on each frame until it
-    // sticks; the listener cancels itself once centred (re-armed on reconnect).
-    _frameSub = frameSource.onFrame.listen((_) => _ensureCursorCentered());
     _qualitySub = session.qualityStats.listen((q) {
       quality = q;
       if (qualityMonitorOn) notifyListeners();
@@ -144,15 +134,7 @@ class SessionController extends ChangeNotifier {
   StreamSubscription? _peerSub;
   StreamSubscription? _qualitySub;
   StreamSubscription? _pipSub;
-  StreamSubscription? _frameSub;
 
-  /// Whether the cursor has been centred for the current connection (once it is,
-  /// we stop re-centring on every frame).
-  bool _cursorCentered = false;
-
-  /// Guards [_ensureCursorCentered] against overlapping async runs (it awaits an
-  /// FFI move and is driven from the per-frame stream).
-  bool _centeringInFlight = false;
 
   /// Auto-reconnect state. [reconnecting] is true while retrying after an
   /// unexpected drop; [reconnectAttempt] is the current attempt (1.._maxReconnect).
@@ -239,7 +221,6 @@ class SessionController extends ChangeNotifier {
     if (m == mode) return;
     mode = m;
     _publishCursorVisibility(); // cursor visibility follows the mode
-    if (m == InteractionUiMode.pointer) unawaited(_recenterCursor());
     notifyListeners();
   }
 
@@ -270,54 +251,6 @@ class SessionController extends ChangeNotifier {
       case GestureAction.zoomCanvas:
       case GestureAction.scrollWheel:
         break;
-    }
-  }
-
-  /// Places the cursor at the centre of the visible viewport (in image space) so
-  /// it is findable, and asks the engine to move the real cursor there. Returns
-  /// whether the engine actually moved it (false if its geometry isn't ready yet
-  /// — the move is silently refused). Used when entering Pointer mode / after a
-  /// flip (fire-and-forget) and by [_ensureCursorCentered] (which retries).
-  Future<bool> _recenterCursor() async {
-    final v = view;
-    if (!v.isValid) return false;
-    cursorImage = v.screenToImage(Offset(v.vw / 2, v.vh / 2));
-    final c = neodeskCursorOverride;
-    // No engine override (demo): the local virtual cursor is already centred.
-    return c == null ? true : await c.moveTo(v.vw / 2, v.vh / 2);
-  }
-
-  /// Centre the cursor once per connection. Retried from the frame stream for two
-  /// reasons: on a cold start the engine refuses the move until its display
-  /// geometry is ready; and, more subtly, the engine performs a *one-time* cursor
-  /// reset to the remote's top-left when it decodes the first image
-  /// (`initializeCursorAndCanvas` → `updateDisplayOrigin`). If we centre before
-  /// that reset, it gets clobbered — the exact cold-start race where the pointer
-  /// is left stuck at the top-left. So we only *commit* (and stop retrying) once
-  /// the first frame has arrived (past the reset) and the move actually lands;
-  /// before that we just pre-centre optimistically (a nicety on a warm start).
-  Future<void> _ensureCursorCentered() async {
-    if (_cursorCentered ||
-        _centeringInFlight ||
-        phase != SessionPhase.connected) return;
-    final v = view;
-    if (!v.isValid || viewport.isEmpty) return;
-    _centeringInFlight = true;
-    try {
-      if (!frameSource.hasFirstFrame) {
-        await _recenterCursor(); // pre-centre, but don't commit yet
-        return;
-      }
-      if (await _recenterCursor()) {
-        _cursorCentered = true;
-        // Landed past the first-image reset: stop watching frames (re-armed on
-        // reconnect).
-        _frameSub?.cancel();
-        _frameSub = null;
-      }
-      // else: engine geometry not ready — retry on the next frame.
-    } finally {
-      _centeringInFlight = false;
     }
   }
 
@@ -394,12 +327,6 @@ class SessionController extends ChangeNotifier {
       cursorImage = v.isValid
           ? v.screenToImage(Offset(s.width / 2, s.height / 2))
           : Offset.zero;
-      // Now that we have a viewport, try to centre the cursor (deferred a frame
-      // so the engine's models are ready; the frame stream also retries until
-      // the view is valid, covering a cold start where the canvas lags).
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_disposed) _ensureCursorCentered();
-      });
       return;
     }
     // Only react to an orientation flip, not to keyboard-driven height changes.
@@ -415,7 +342,6 @@ class SessionController extends ChangeNotifier {
         } else {
           fitCanvas();
         }
-        if (mode == InteractionUiMode.pointer) unawaited(_recenterCursor());
       });
     }
   }
@@ -733,7 +659,6 @@ class SessionController extends ChangeNotifier {
     _peerSub?.cancel();
     _qualitySub?.cancel();
     _pipSub?.cancel();
-    _frameSub?.cancel();
     super.dispose();
   }
 }

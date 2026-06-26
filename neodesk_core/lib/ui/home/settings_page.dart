@@ -207,51 +207,87 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Update available · v${info.version}'),
-        content: SingleChildScrollView(
-          child: Text(info.notes.isEmpty
-              ? 'A newer version is available.'
-              : info.notes),
+        title: Row(children: [
+          const Icon(Icons.system_update, color: AppColors.accent),
+          const SizedBox(width: Dimens.s12),
+          Expanded(child: Text('Update to v${info.version}')),
+        ]),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 320),
+          child: SingleChildScrollView(
+            child: Text(
+                info.notes.isEmpty
+                    ? 'A newer version is available.'
+                    : info.notes,
+                style: AppTypography.body
+                    .copyWith(color: AppColors.textSecondary)),
+          ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
-          TextButton(
+          ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
               _downloadUpdate(info);
             },
-            child: const Text('Update'),
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Update'),
           ),
         ],
       ),
     );
   }
 
+  static String _mb(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
+
   /// Download the APK with a progress dialog, then hand it to the system
   /// installer. Falls back to opening the release in the browser on failure.
   Future<void> _downloadUpdate(UpdateInfo info) async {
-    final progress = ValueNotifier<double>(0);
+    // (received, total) bytes. total == 0 ⇒ length unknown (indeterminate bar).
+    final progress = ValueNotifier<(int, int)>((0, 0));
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text('Downloading update…'),
-        content: ValueListenableBuilder<double>(
+        title: Row(children: [
+          const Icon(Icons.download_rounded, color: AppColors.accent),
+          const SizedBox(width: Dimens.s12),
+          Expanded(child: Text('Downloading v${info.version}')),
+        ]),
+        content: ValueListenableBuilder<(int, int)>(
           valueListenable: progress,
-          builder: (_, p, __) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LinearProgressIndicator(value: p > 0 ? p : null),
-              const SizedBox(height: Dimens.s12),
-              Text('${(p * 100).toStringAsFixed(0)}%'),
-            ],
-          ),
+          builder: (_, v, __) {
+            final received = v.$1, total = v.$2;
+            final ratio = total > 0 ? received / total : null;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Dimens.rPill),
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    minHeight: 8,
+                    backgroundColor: AppColors.bgInput,
+                    color: AppColors.accent,
+                  ),
+                ),
+                const SizedBox(height: Dimens.s12),
+                Text(
+                  ratio == null
+                      ? '${_mb(received)} MB'
+                      : '${_mb(received)} / ${_mb(total)} MB   ·   ${(ratio * 100).toStringAsFixed(0)}%',
+                  style: AppTypography.caption,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
-    final ok = await widget.core
-        .downloadAndInstall(info.url, onProgress: (p) => progress.value = p);
+    final ok = await widget.core.downloadAndInstall(info.url,
+        onProgress: (r, t) => progress.value = (r, t));
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop(); // close progress dialog
       if (!ok) {
@@ -273,119 +309,174 @@ class _SettingsPageState extends State<SettingsPage> {
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
             child: Text('Settings', style: AppTypography.display),
           ),
-          _group('General'),
-          _row(Icons.language, 'Language',
-              value: _labelOf(_languages, _language),
-              onTap: () => _pickOption('Language', _languages,
-                  ConfigKeys.language, _language, (v) {
-                setState(() => _language = v);
-                widget.core.setLanguage(v); // applies to engine dialogs going forward
-              })),
-          _switchRow(Icons.lock_outline, 'App lock (require unlock)', _appLock,
-              (v) async {
-            final messenger = ScaffoldMessenger.of(context);
-            if (v) {
-              // Confirm a device credential exists / the user can authenticate
-              // before turning the lock on, so they can't lock themselves out.
-              final ok = await widget.core.authenticateAppLock();
-              if (!ok) {
-                messenger.showSnackBar(const SnackBar(
-                    content: Text(
-                        'Set a device screen lock first (or authentication was cancelled)')));
-                return;
+          // Control mechanics, ordered the way you'd reach for them: how you
+          // drive → pointer/zoom → scrolling → keyboard → hardware keys, then
+          // app-level (general, about).
+          _section('Controls', [
+            _row(Icons.touch_app, 'Default mode',
+                value: _mode.label, onTap: _pickMode),
+            _row(Icons.gesture, 'Customize gestures', onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => GestureSettingsPage(config: _cfg),
+              ));
+            }),
+            _switchRow(
+                Icons.mouse_outlined, 'Hide cursor in Touch mode', _hideCursor,
+                (v) {
+              setState(() => _hideCursor = v);
+              _cfg.setBool(ConfigKeys.hideCursorInTouch, v);
+            }),
+          ]),
+          _section('Pointer & zoom', [
+            _sliderRow(
+                Icons.speed,
+                'Pointer speed',
+                '${_pointerGain.toStringAsFixed(1)}×',
+                _pointerGain,
+                _gainMin,
+                _gainMax,
+                (v) => setState(() => _pointerGain = v),
+                () => _cfg.set(ConfigKeys.pointerGainBase,
+                    _pointerGain.toStringAsFixed(2))),
+            _row(Icons.zoom_in, 'Max zoom',
+                value: _labelOf(_maxZooms, _maxZoom),
+                onTap: () => _pickOption('Max zoom', _maxZooms,
+                    ConfigKeys.zoomMax, _maxZoom,
+                    (v) => setState(() => _maxZoom = v))),
+            _row(Icons.open_in_full, 'Edge auto-pan speed',
+                value: _labelOf(_edgePans, _edgePan),
+                onTap: () => _pickOption('Edge auto-pan speed', _edgePans,
+                    ConfigKeys.edgePanSpeed, _edgePan,
+                    (v) => setState(() => _edgePan = v))),
+          ]),
+          _section('Scrolling', [
+            // Slider runs slow→fast; internally a smaller px-per-notch is faster.
+            _sliderRow(Icons.swipe_vertical, 'Scroll speed', null,
+                _stepMin + _stepMax - _scrollStep, _stepMin, _stepMax,
+                (v) => setState(() => _scrollStep = _stepMin + _stepMax - v),
+                () => _cfg.set(
+                    ConfigKeys.scrollStep, _scrollStep.round().toString())),
+            _switchRow(
+                Icons.swap_vert, 'Invert scroll direction', _scrollInvert, (v) {
+              setState(() => _scrollInvert = v);
+              _cfg.setBool(ConfigKeys.scrollInvert, v);
+            }),
+          ]),
+          _section('Keyboard', [
+            _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => ComboSettingsPage(config: _cfg),
+              ));
+            }),
+            _row(Icons.format_size, 'Key size',
+                value: _labelOf(_keySizes, _keySize),
+                onTap: () => _pickOption('Key size', _keySizes,
+                    ConfigKeys.keySize, _keySize,
+                    (v) => setState(() => _keySize = v))),
+            _sliderRow(
+                Icons.opacity,
+                'Panel opacity',
+                '${(_panelOpacity * 100).round()}%',
+                _panelOpacity,
+                _opacityMin,
+                _opacityMax,
+                (v) => setState(() => _panelOpacity = v),
+                () => _cfg.set(ConfigKeys.panelOpacity,
+                    _panelOpacity.toStringAsFixed(2))),
+            _switchRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
+                _keyCompact, (v) {
+              setState(() => _keyCompact = v);
+              _cfg.setBool(ConfigKeys.keyCompact, v);
+            }),
+          ]),
+          _section('Volume keys', [
+            _row(Icons.volume_up_outlined, 'Volume Up key',
+                value: _labelOf(_volumeActions, _volumeUp),
+                onTap: () => _pickOption('Volume Up key', _volumeActions,
+                    ConfigKeys.volumeUp, _volumeUp,
+                    (v) => setState(() => _volumeUp = v))),
+            _row(Icons.volume_down_outlined, 'Volume Down key',
+                value: _labelOf(_volumeActions, _volumeDown),
+                onTap: () => _pickOption('Volume Down key', _volumeActions,
+                    ConfigKeys.volumeDown, _volumeDown,
+                    (v) => setState(() => _volumeDown = v))),
+          ]),
+          _section('General', [
+            _row(Icons.language, 'Language',
+                value: _labelOf(_languages, _language),
+                onTap: () => _pickOption('Language', _languages,
+                    ConfigKeys.language, _language, (v) {
+                  setState(() => _language = v);
+                  widget.core.setLanguage(v); // engine dialogs, going forward
+                })),
+            _switchRow(
+                Icons.lock_outline, 'App lock (require unlock)', _appLock,
+                (v) async {
+              final messenger = ScaffoldMessenger.of(context);
+              if (v) {
+                // Confirm a device credential exists / the user can authenticate
+                // before turning the lock on, so they can't lock themselves out.
+                final ok = await widget.core.authenticateAppLock();
+                if (!ok) {
+                  messenger.showSnackBar(const SnackBar(
+                      content: Text(
+                          'Set a device screen lock first (or authentication was cancelled)')));
+                  return;
+                }
               }
-            }
-            if (!mounted) return;
-            setState(() => _appLock = v);
-            _cfg.setBool(ConfigKeys.appLock, v);
-          }),
-          _group('Interaction'),
-          _row(Icons.touch_app, 'Default mode',
-              value: _mode.label, onTap: _pickMode),
-          _row(Icons.gesture, 'Customize gestures', onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => GestureSettingsPage(config: _cfg),
-            ));
-          }),
-          _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => ComboSettingsPage(config: _cfg),
-            ));
-          }),
-          _switchRow(
-              Icons.mouse_outlined, 'Hide cursor in Touch mode', _hideCursor,
-              (v) {
-            setState(() => _hideCursor = v);
-            _cfg.setBool(ConfigKeys.hideCursorInTouch, v);
-          }),
-          _row(Icons.volume_up_outlined, 'Volume Up key',
-              value: _labelOf(_volumeActions, _volumeUp),
-              onTap: () => _pickOption('Volume Up key', _volumeActions,
-                  ConfigKeys.volumeUp, _volumeUp,
-                  (v) => setState(() => _volumeUp = v))),
-          _row(Icons.volume_down_outlined, 'Volume Down key',
-              value: _labelOf(_volumeActions, _volumeDown),
-              onTap: () => _pickOption('Volume Down key', _volumeActions,
-                  ConfigKeys.volumeDown, _volumeDown,
-                  (v) => setState(() => _volumeDown = v))),
-          _group('Pointer mode'),
-          _sliderRow(Icons.speed, 'Pointer speed', '${_pointerGain.toStringAsFixed(1)}×',
-              _pointerGain, _gainMin, _gainMax,
-              (v) => setState(() => _pointerGain = v),
-              () => _cfg.set(
-                  ConfigKeys.pointerGainBase, _pointerGain.toStringAsFixed(2))),
-          _row(Icons.zoom_in, 'Max zoom',
-              value: _labelOf(_maxZooms, _maxZoom),
-              onTap: () => _pickOption('Max zoom', _maxZooms, ConfigKeys.zoomMax,
-                  _maxZoom, (v) => setState(() => _maxZoom = v))),
-          _row(Icons.open_in_full, 'Edge auto-pan speed',
-              value: _labelOf(_edgePans, _edgePan),
-              onTap: () => _pickOption('Edge auto-pan speed', _edgePans,
-                  ConfigKeys.edgePanSpeed, _edgePan,
-                  (v) => setState(() => _edgePan = v))),
-          _group('Scrolling'),
-          // Slider runs slow→fast; internally a smaller px-per-notch is faster.
-          _sliderRow(Icons.swipe_vertical, 'Scroll speed', null,
-              _stepMin + _stepMax - _scrollStep, _stepMin, _stepMax,
-              (v) => setState(() => _scrollStep = _stepMin + _stepMax - v),
-              () => _cfg.set(
-                  ConfigKeys.scrollStep, _scrollStep.round().toString())),
-          _switchRow(Icons.swap_vert, 'Invert scroll direction', _scrollInvert,
-              (v) {
-            setState(() => _scrollInvert = v);
-            _cfg.setBool(ConfigKeys.scrollInvert, v);
-          }),
-          _group('Keyboard & panels'),
-          _sliderRow(Icons.opacity, 'Panel opacity',
-              '${(_panelOpacity * 100).round()}%',
-              _panelOpacity, _opacityMin, _opacityMax,
-              (v) => setState(() => _panelOpacity = v),
-              () => _cfg.set(
-                  ConfigKeys.panelOpacity, _panelOpacity.toStringAsFixed(2))),
-          _row(Icons.format_size, 'Key size',
-              value: _labelOf(_keySizes, _keySize),
-              onTap: () => _pickOption('Key size', _keySizes, ConfigKeys.keySize,
-                  _keySize, (v) => setState(() => _keySize = v))),
-          _switchRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
-              _keyCompact, (v) {
-            setState(() => _keyCompact = v);
-            _cfg.setBool(ConfigKeys.keyCompact, v);
-          }),
-          _group('About'),
-          _row(Icons.info_outline, 'Version', value: kNeodeskVersion),
-          _row(Icons.system_update, 'Check for updates', onTap: _checkUpdate),
+              if (!mounted) return;
+              setState(() => _appLock = v);
+              _cfg.setBool(ConfigKeys.appLock, v);
+            }),
+          ]),
+          _section('About', [
+            _row(Icons.info_outline, 'Version', value: kNeodeskVersion),
+            _row(Icons.system_update, 'Check for updates', onTap: _checkUpdate),
+          ]),
           const SizedBox(height: Dimens.s24),
         ],
       ),
     );
   }
 
-  Widget _group(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            Dimens.pageInset, Dimens.s24, Dimens.pageInset, Dimens.s8),
-        child: Text(title,
-            style: AppTypography.caption.copyWith(
-                color: AppColors.accent, fontWeight: FontWeight.w700)),
+  /// A titled group whose rows are wrapped in a single rounded card with hairline
+  /// separators — the modern grouped-settings look.
+  Widget _section(String title, List<Widget> rows) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Dimens.pageInset),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  Dimens.s4, Dimens.s24, 0, Dimens.s8),
+              child: Text(title.toUpperCase(),
+                  style: AppTypography.caption.copyWith(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.bgElevated1,
+                borderRadius: BorderRadius.circular(Dimens.rCard),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < rows.length; i++) ...[
+                    if (i > 0)
+                      const Divider(
+                          height: 1,
+                          thickness: 1,
+                          indent: 56,
+                          color: AppColors.divider),
+                    rows[i],
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 
   Widget _row(IconData icon, String label,
