@@ -50,18 +50,20 @@ abstract final class ComboStore {
   static void save(ConfigStore cfg, List<KeyCombo> combos) =>
       cfg.set(ConfigKeys.combos, jsonEncode(combos.map((c) => c.toJson()).toList()));
 
-  static List<KeyCombo> defaults() => const [
-        KeyCombo(label: 'Ctrl+C', mods: {'ctrl'}, key: 'VK_C'),
-        KeyCombo(label: 'Ctrl+V', mods: {'ctrl'}, key: 'VK_V'),
-        KeyCombo(label: 'Ctrl+X', mods: {'ctrl'}, key: 'VK_X'),
-        KeyCombo(label: 'Ctrl+Z', mods: {'ctrl'}, key: 'VK_Z'),
-        KeyCombo(label: 'Ctrl+A', mods: {'ctrl'}, key: 'VK_A'),
-        KeyCombo(label: 'Ctrl+S', mods: {'ctrl'}, key: 'VK_S'),
-        KeyCombo(label: 'Alt+Tab', mods: {'alt'}, key: 'VK_TAB'),
+  // Returns a fresh growable list each call so callers can add/remove/edit
+  // entries in place — never a const (unmodifiable) list.
+  static List<KeyCombo> defaults() => [
+        const KeyCombo(label: 'Ctrl+C', mods: {'ctrl'}, key: 'VK_C'),
+        const KeyCombo(label: 'Ctrl+V', mods: {'ctrl'}, key: 'VK_V'),
+        const KeyCombo(label: 'Ctrl+X', mods: {'ctrl'}, key: 'VK_X'),
+        const KeyCombo(label: 'Ctrl+Z', mods: {'ctrl'}, key: 'VK_Z'),
+        const KeyCombo(label: 'Ctrl+A', mods: {'ctrl'}, key: 'VK_A'),
+        const KeyCombo(label: 'Ctrl+S', mods: {'ctrl'}, key: 'VK_S'),
+        const KeyCombo(label: 'Alt+Tab', mods: {'alt'}, key: 'VK_TAB'),
         // Note: no Ctrl+Alt+Del here — injected as regular keys it doesn't reach
         // the secure attention desktop. The More menu's dedicated action (the
         // engine's sessionCtrlAltDel) is the one that actually works.
-        KeyCombo(label: 'Win+D', mods: {'meta'}, key: 'VK_D'),
+        const KeyCombo(label: 'Win+D', mods: {'meta'}, key: 'VK_D'),
       ];
 }
 

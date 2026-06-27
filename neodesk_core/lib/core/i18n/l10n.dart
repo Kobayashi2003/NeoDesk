@@ -229,6 +229,14 @@ const Map<String, String> _zh = {
   'Two-finger vertical drag': '双指垂直拖动',
   'Zoom view': '缩放画面',
   'Paste': '粘贴',
+  // Gesture settings (action/slot labels)
+  'None': '无',
+  'Middle click': '中键单击',
+  'Show toolbar': '显示工具栏',
+  'Toggle keyboard': '切换键盘',
+  'Escape key': 'Esc 键',
+  'Pan view': '平移画面',
+  'One-finger long press': '单指长按',
 };
 
 const Map<String, String> _ja = {
@@ -414,4 +422,12 @@ const Map<String, String> _ja = {
   'Two-finger vertical drag': '2 本指の垂直ドラッグ',
   'Zoom view': '画面をズーム',
   'Paste': '貼り付け',
+  // Gesture settings (action/slot labels)
+  'None': 'なし',
+  'Middle click': '中クリック',
+  'Show toolbar': 'ツールバーを表示',
+  'Toggle keyboard': 'キーボードを切り替え',
+  'Escape key': 'Esc キー',
+  'Pan view': '画面をパン',
+  'One-finger long press': '1 本指の長押し',
 };

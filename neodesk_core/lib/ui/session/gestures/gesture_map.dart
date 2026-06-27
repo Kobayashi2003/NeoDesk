@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:neodesk_core/neodesk_core.dart' show tr;
 
 import 'interaction_ui_mode.dart';
 
@@ -26,18 +27,18 @@ enum GestureAction {
 
 extension GestureActionX on GestureAction {
   String get label => switch (this) {
-        GestureAction.none => 'None',
-        GestureAction.leftClick => 'Left click',
-        GestureAction.rightClick => 'Right click',
-        GestureAction.middleClick => 'Middle click',
-        GestureAction.doubleClick => 'Double click',
-        GestureAction.showToolbar => 'Show toolbar',
-        GestureAction.toggleKeyboard => 'Toggle keyboard',
-        GestureAction.escape => 'Escape key',
-        GestureAction.moveCursor => 'Move cursor',
-        GestureAction.panCanvas => 'Pan view',
-        GestureAction.zoomCanvas => 'Zoom view',
-        GestureAction.scrollWheel => 'Scroll wheel',
+        GestureAction.none => tr('None'),
+        GestureAction.leftClick => tr('Left click'),
+        GestureAction.rightClick => tr('Right click'),
+        GestureAction.middleClick => tr('Middle click'),
+        GestureAction.doubleClick => tr('Double click'),
+        GestureAction.showToolbar => tr('Show toolbar'),
+        GestureAction.toggleKeyboard => tr('Toggle keyboard'),
+        GestureAction.escape => tr('Escape key'),
+        GestureAction.moveCursor => tr('Move cursor'),
+        GestureAction.panCanvas => tr('Pan view'),
+        GestureAction.zoomCanvas => tr('Zoom view'),
+        GestureAction.scrollWheel => tr('Scroll wheel'),
       };
 
   /// Continuous actions are applied each frame of a drag/pinch.
@@ -62,15 +63,15 @@ enum GestureSlot {
 
 extension GestureSlotX on GestureSlot {
   String get label => switch (this) {
-        GestureSlot.oneFingerTap => 'One-finger tap',
-        GestureSlot.oneFingerLongPress => 'One-finger long press',
-        GestureSlot.oneFingerDrag => 'One-finger drag',
-        GestureSlot.twoFingerTap => 'Two-finger tap',
-        GestureSlot.twoFingerDragH => 'Two-finger horizontal drag',
-        GestureSlot.twoFingerDragV => 'Two-finger vertical drag',
-        GestureSlot.twoFingerPinch => 'Two-finger pinch',
-        GestureSlot.threeFingerTap => 'Three-finger tap',
-        GestureSlot.fourFingerTap => 'Four-finger tap',
+        GestureSlot.oneFingerTap => tr('One-finger tap'),
+        GestureSlot.oneFingerLongPress => tr('One-finger long press'),
+        GestureSlot.oneFingerDrag => tr('One-finger drag'),
+        GestureSlot.twoFingerTap => tr('Two-finger tap'),
+        GestureSlot.twoFingerDragH => tr('Two-finger horizontal drag'),
+        GestureSlot.twoFingerDragV => tr('Two-finger vertical drag'),
+        GestureSlot.twoFingerPinch => tr('Two-finger pinch'),
+        GestureSlot.threeFingerTap => tr('Three-finger tap'),
+        GestureSlot.fourFingerTap => tr('Four-finger tap'),
       };
 
   /// Continuous triggers bind to continuous actions (drag/pinch); discrete to
