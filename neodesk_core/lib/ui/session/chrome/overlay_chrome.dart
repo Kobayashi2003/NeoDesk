@@ -5,7 +5,6 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/dimens.dart';
 import '../../widgets/app_sheet.dart';
-import '../gestures/gesture_help.dart';
 import '../gestures/interaction_ui_mode.dart';
 import '../session_controller.dart';
 
@@ -273,8 +272,6 @@ class OverlayChrome extends StatelessWidget {
                 controller.setChrome(false);
                 controller.core.enterPictureInPicture();
               }),
-              _actionTile(ctx, Icons.gesture, 'Gesture help',
-                  onTap: () => showGestureHelp(context, controller.mode)),
               if (isAndroid) ...[
                 _actionTile(ctx, Icons.arrow_back, 'Back',
                     pop: false,

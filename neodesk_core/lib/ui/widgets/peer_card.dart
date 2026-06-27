@@ -112,52 +112,84 @@ class _PeerListTileState extends State<PeerListTile> {
 }
 
 /// A square-ish card for the horizontal "favourites" shelf. See §4.1.
-class PeerShelfCard extends StatelessWidget {
-  const PeerShelfCard({super.key, required this.peer, required this.onTap});
+///
+/// Carries a platform-tinted frame and a star badge so a favourited host reads
+/// as distinct from the plain recent rows; long-press opens [onMenu].
+class PeerShelfCard extends StatefulWidget {
+  const PeerShelfCard({
+    super.key,
+    required this.peer,
+    required this.onTap,
+    this.onMenu,
+  });
 
   final PeerEntry peer;
   final VoidCallback onTap;
+  final VoidCallback? onMenu;
+
+  @override
+  State<PeerShelfCard> createState() => _PeerShelfCardState();
+}
+
+class _PeerShelfCardState extends State<PeerShelfCard> {
+  bool _down = false;
 
   @override
   Widget build(BuildContext context) {
+    final peer = widget.peer;
     final v = _platformVisual(peer.platform);
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 132,
-        margin: const EdgeInsets.only(right: Dimens.s12),
-        padding: const EdgeInsets.all(Dimens.s12),
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated1,
-          borderRadius: BorderRadius.circular(Dimens.rCard),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: v.tint.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(Dimens.rChip),
+      onTapDown: (_) => setState(() => _down = true),
+      onTapCancel: () => setState(() => _down = false),
+      onTapUp: (_) => setState(() => _down = false),
+      onTap: widget.onTap,
+      onLongPress: widget.onMenu,
+      child: AnimatedScale(
+        scale: _down ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 90),
+        child: Container(
+          width: 132,
+          margin: const EdgeInsets.only(right: Dimens.s12),
+          padding: const EdgeInsets.all(Dimens.s12),
+          decoration: BoxDecoration(
+            color: _down ? AppColors.bgElevated2 : AppColors.bgElevated1,
+            borderRadius: BorderRadius.circular(Dimens.rCard),
+            border: Border.all(color: v.tint.withOpacity(0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: v.tint.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(Dimens.rChip),
+                    ),
+                    child: Icon(v.icon, color: v.tint, size: 30),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.star, color: AppColors.accent, size: 18),
+                ],
               ),
-              child: Icon(v.icon, color: v.tint, size: 30),
-            ),
-            const Spacer(),
-            Text(peer.displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.body),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                StatusDot(online: peer.online, size: 7),
-                const SizedBox(width: 6),
-                Text(peer.online ? 'Online' : 'Offline',
-                    style: AppTypography.caption),
-              ],
-            ),
-          ],
+              const Spacer(),
+              Text(peer.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  StatusDot(online: peer.online, size: 7),
+                  const SizedBox(width: 6),
+                  Text(peer.online ? tr('Online') : tr('Offline'),
+                      style: AppTypography.caption),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

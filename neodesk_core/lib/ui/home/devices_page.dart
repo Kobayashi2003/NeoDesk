@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:neodesk_core/neodesk_core.dart';
 
@@ -27,8 +29,24 @@ class _DevicesPageState extends State<DevicesPage> {
   final _idFocus = FocusNode();
   bool _lanExpanded = false;
 
+  // Mirror of the current favorite ids, so the peer menu can offer add vs remove.
+  final Set<String> _favIds = {};
+  StreamSubscription<List<PeerEntry>>? _favSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _favSub = widget.core.peers.favorites.listen((favs) {
+      if (!mounted) return;
+      setState(() => _favIds
+        ..clear()
+        ..addAll(favs.map((p) => p.id)));
+    });
+  }
+
   @override
   void dispose() {
+    _favSub?.cancel();
     _idCtrl.dispose();
     _idFocus.dispose();
     super.dispose();
@@ -105,8 +123,12 @@ class _DevicesPageState extends State<DevicesPage> {
                 () => _openFiles(peer.id)),
             _sheetItem(ctx, Icons.terminal, tr('Terminal'),
                 () => widget.core.openTerminal(context, peer.id)),
-            _sheetItem(ctx, Icons.star_outline, tr('Add to favorites'),
-                () => widget.core.peers.addFavorite(peer.id)),
+            if (_favIds.contains(peer.id))
+              _sheetItem(ctx, Icons.star, tr('Remove from favorites'),
+                  () => widget.core.peers.removeFavorite(peer.id))
+            else
+              _sheetItem(ctx, Icons.star_outline, tr('Add to favorites'),
+                  () => widget.core.peers.addFavorite(peer.id)),
             _sheetItem(ctx, Icons.drive_file_rename_outline, tr('Rename'),
                 () => _renamePeer(peer)),
             _sheetItem(ctx, Icons.delete_outline, tr('Delete'), () {
@@ -222,6 +244,7 @@ class _DevicesPageState extends State<DevicesPage> {
                   itemBuilder: (_, i) => PeerShelfCard(
                     peer: items[i],
                     onTap: () => _connect(items[i].id),
+                    onMenu: () => _peerMenu(items[i]),
                   ),
                 ),
               ),
