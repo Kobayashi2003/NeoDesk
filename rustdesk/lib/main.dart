@@ -510,14 +510,18 @@ class _AppState extends State<App> with WidgetsBindingObserver {
               : isWeb
                   ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
                   : bind.mainGetAppNameSync(),
-          // Mobile runs the redesigned neodesk UI; force its Spotify-style dark
-          // theme app-wide so engine dialogs/toasts/sheets stay consistent
-          // (don't follow RustDesk's light/system theme). Desktop/web keep the
-          // original RustDesk theme.
-          theme: _isNeodeskMobile ? neodeskAppTheme() : MyTheme.lightTheme,
-          darkTheme: _isNeodeskMobile ? neodeskAppTheme() : MyTheme.darkTheme,
+          // Mobile runs the redesigned neodesk UI; engine dialogs/toasts/sheets
+          // use the neodesk light & dark theme slots, switched live to follow the
+          // neodesk Theme setting (see launcher: Get.changeThemeMode). Desktop/web
+          // keep the original RustDesk theme.
+          theme: _isNeodeskMobile
+              ? neodeskEngineTheme(Brightness.light)
+              : MyTheme.lightTheme,
+          darkTheme: _isNeodeskMobile
+              ? neodeskEngineTheme(Brightness.dark)
+              : MyTheme.darkTheme,
           themeMode:
-              _isNeodeskMobile ? ThemeMode.dark : MyTheme.currentThemeMode(),
+              _isNeodeskMobile ? neodeskThemeMode() : MyTheme.currentThemeMode(),
           home: isDesktop
               ? const DesktopTabPage()
               : isWeb

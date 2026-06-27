@@ -12,30 +12,62 @@ class AppTypography {
 
   static const String? fontFamily = null;
 
-  // Colour-bearing styles are getters (not const) so they follow the active
-  // brightness via [AppColors]; the colourless [button] stays const.
-  static TextStyle get display => const TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-        height: 1.1,
-      ).copyWith(color: AppColors.textPrimary);
+  // Colour-bearing styles follow the active brightness via [AppColors], but are
+  // memoised per brightness so accessing them in list builders doesn't allocate a
+  // new TextStyle every frame — they're only rebuilt when the theme flips. The
+  // colourless [button] stays a plain const.
+  static Brightness? _cachedFor;
+  static late TextStyle _display, _title, _body, _caption, _mono;
 
-  static TextStyle get title => const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-      ).copyWith(color: AppColors.textPrimary);
+  static void _ensureCache() {
+    if (_cachedFor == appBrightness.value) return;
+    _cachedFor = appBrightness.value;
+    _display = const TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -0.5,
+      height: 1.1,
+    ).copyWith(color: AppColors.textPrimary);
+    _title = const TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
+    ).copyWith(color: AppColors.textPrimary);
+    _body = const TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+    ).copyWith(color: AppColors.textPrimary);
+    _caption = const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+    ).copyWith(color: AppColors.textSecondary);
+    _mono = const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      fontFeatures: [FontFeature.tabularFigures()],
+      letterSpacing: 1.0,
+    ).copyWith(color: AppColors.textPrimary);
+  }
 
-  static TextStyle get body => const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ).copyWith(color: AppColors.textPrimary);
+  static TextStyle get display {
+    _ensureCache();
+    return _display;
+  }
 
-  static TextStyle get caption => const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w400,
-      ).copyWith(color: AppColors.textSecondary);
+  static TextStyle get title {
+    _ensureCache();
+    return _title;
+  }
+
+  static TextStyle get body {
+    _ensureCache();
+    return _body;
+  }
+
+  static TextStyle get caption {
+    _ensureCache();
+    return _caption;
+  }
 
   static const button = TextStyle(
     fontSize: 15,
@@ -43,12 +75,10 @@ class AppTypography {
     letterSpacing: 0.2,
   );
 
-  static TextStyle get mono => const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        fontFeatures: [FontFeature.tabularFigures()],
-        letterSpacing: 1.0,
-      ).copyWith(color: AppColors.textPrimary);
+  static TextStyle get mono {
+    _ensureCache();
+    return _mono;
+  }
 
   /// Builds the Material [TextTheme] from the scale above.
   static TextTheme textTheme() => TextTheme(

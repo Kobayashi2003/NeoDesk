@@ -318,7 +318,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     return Container(
       decoration: BoxDecoration(
         // User-tunable opacity over the dark panel, so the remote shows through.
-        color: const Color(0xFF181818).withOpacity(widget.opacity.clamp(0.4, 1)),
+        color: OverlayColors.panelBg.withOpacity(widget.opacity.clamp(0.4, 1)),
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(Dimens.rSheet)),
         border: Border(top: BorderSide(color: AppColors.border)),

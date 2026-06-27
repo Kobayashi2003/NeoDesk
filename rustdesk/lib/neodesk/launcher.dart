@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:neodesk_core/neodesk_core.dart'
     show ConfigKeys, AppLocale, appLocale, applyLocale;
 import 'package:neodesk_core/ui/home/app_lock_gate.dart';
@@ -43,55 +44,61 @@ const String neodeskAppName = 'neodesk';
 /// `extensions:` arg) keeps those extensions present, so the engine dialogs
 /// stay crash-free while picking up the new accent/surface colours. The
 /// neodesk home itself is additionally wrapped in `AppTheme.dark()` below.
-ThemeData neodeskAppTheme() {
-  final base = MyTheme.darkTheme;
+ThemeData neodeskEngineTheme(Brightness b) {
+  final p = paletteFor(b);
+  final base = b == Brightness.light ? MyTheme.lightTheme : MyTheme.darkTheme;
   return base.copyWith(
-    scaffoldBackgroundColor: AppColors.bgBase,
-    canvasColor: AppColors.bgBase,
-    dialogBackgroundColor: AppColors.bgElevated2,
-    cardColor: AppColors.bgElevated2,
+    scaffoldBackgroundColor: p.bgBase,
+    canvasColor: p.bgBase,
+    dialogBackgroundColor: p.bgElevated2,
+    cardColor: p.bgElevated2,
     colorScheme: base.colorScheme.copyWith(
-      primary: AppColors.accent,
-      secondary: AppColors.accent,
-      surface: AppColors.bgElevated2,
+      primary: p.accent,
+      secondary: p.accent,
+      surface: p.bgElevated2,
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
-      color: AppColors.accent,
+      color: p.accent,
     ),
     // Give every engine-spawned dialog (password prompt, errors, confirmations)
-    // the app's rounded dark style instead of default Material corners/titles.
+    // the app's rounded style instead of default Material corners/titles.
     dialogTheme: DialogTheme(
-      backgroundColor: AppColors.bgElevated2,
+      backgroundColor: p.bgElevated2,
       surfaceTintColor: Colors.transparent,
       elevation: 12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       titleTextStyle: TextStyle(
-        color: AppColors.textPrimary,
+        color: p.textPrimary,
         fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
       contentTextStyle: TextStyle(
-        color: AppColors.textSecondary,
+        color: p.textSecondary,
         fontSize: 15,
         height: 1.35,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.textOnAccent,
-        disabledForegroundColor: AppColors.textDisabled,
-        disabledBackgroundColor: AppColors.bgElevated2,
+        backgroundColor: p.accent,
+        foregroundColor: p.textOnAccent,
+        disabledForegroundColor: p.textDisabled,
+        disabledBackgroundColor: p.bgElevated2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24.0),
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: AppColors.accent),
+      style: TextButton.styleFrom(foregroundColor: p.accent),
     ),
   );
 }
+
+/// The engine theme mode that matches neodesk's current brightness — so the
+/// app-wide GetMaterialApp picks the right (light/dark) engine theme slot.
+ThemeMode neodeskThemeMode() =>
+    appBrightness.value == Brightness.light ? ThemeMode.light : ThemeMode.dark;
 
 /// Must be called once before runApp (after engine init).
 void setupNeodesk() {
@@ -102,9 +109,11 @@ void setupNeodesk() {
   bind.mainSetLocalOption(
       key: kCommConfKeyLang, value: lang == 'system' ? '' : lang);
   applyLocale(lang); // drive neodesk's own UI language (zh / ja)
-  // Drive neodesk's own light/dark theme (engine dialogs keep the app-wide one).
+  // Drive neodesk's own light/dark theme. When it changes, also switch the
+  // app-wide GetMaterialApp's mode so engine-spawned dialogs follow suit.
   applyThemeSetting(
       neodeskCore.config.get(ConfigKeys.theme, defaultValue: 'dark'));
+  appBrightness.addListener(() => Get.changeThemeMode(neodeskThemeMode()));
   neodeskFrameOverride = (context) => const RustdeskFrameWidget();
   neodeskCanvasOverride = _RustdeskCanvasControl();
   neodeskCursorOverride = _RustdeskCursorControl();

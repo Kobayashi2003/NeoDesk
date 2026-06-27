@@ -1,12 +1,12 @@
-import 'dart:ui' show PlatformDispatcher;
+import 'dart:ui' show Brightness, PlatformDispatcher;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
-/// One brightness' worth of the neodesk colour set. Widgets never read this
-/// directly — they go through [AppColors], which forwards to the active palette
-/// so a theme switch re-colours the whole UI. See DESIGN.md §2.1.
-class _Palette {
-  const _Palette({
+/// One brightness' worth of the neodesk colour set. Widgets read through
+/// [AppColors] (the active palette); theme builders that must produce a theme for
+/// a *specific* brightness use [paletteFor]. See DESIGN.md §2.1.
+class NeodeskPalette {
+  const NeodeskPalette({
     required this.bgBase,
     required this.bgElevated1,
     required this.bgElevated2,
@@ -33,7 +33,7 @@ class _Palette {
 }
 
 /// Spotify-flavoured dark palette (the original look).
-const _dark = _Palette(
+const kDarkPalette = NeodeskPalette(
   bgBase: Color(0xFF121212),
   bgElevated1: Color(0xFF181818),
   bgElevated2: Color(0xFF282828),
@@ -54,7 +54,7 @@ const _dark = _Palette(
 
 /// Light counterpart. A slightly deeper green keeps the accent legible on light
 /// surfaces (with white text on it); neutrals invert.
-const _light = _Palette(
+const kLightPalette = NeodeskPalette(
   bgBase: Color(0xFFF5F6F8),
   bgElevated1: Color(0xFFFFFFFF),
   bgElevated2: Color(0xFFFFFFFF),
@@ -73,62 +73,98 @@ const _light = _Palette(
   border: Color(0xFFD6D9DE),
 );
 
+/// The palette for a specific brightness (for building a theme regardless of the
+/// currently-active one — e.g. the engine's light & dark theme slots).
+NeodeskPalette paletteFor(Brightness b) =>
+    b == Brightness.light ? kLightPalette : kDarkPalette;
+
 /// Active brightness for neodesk's own UI. The root ([NeodeskEntry]) listens and
 /// re-themes the whole UI when it changes; [AppColors]/[AppTypography] read it.
 /// Mirrors the `appLocale` reactive pattern. Defaults to dark.
 final ValueNotifier<Brightness> appBrightness = ValueNotifier(Brightness.dark);
 
-_Palette get _p => appBrightness.value == Brightness.light ? _light : _dark;
+/// The current Theme *setting* (`system` / `light` / `dark`), kept so the system
+/// observer knows whether to track the device brightness.
+String _themeSetting = 'dark';
 
-/// Apply a stored Theme setting (`system` / `light` / `dark`) to the live UI.
-/// `system` resolves to the device brightness (snapshot — re-applied on change).
+/// Apply a stored Theme setting to the live UI. `system` tracks the device
+/// brightness — including later changes, via [_BrightnessObserver].
 void applyThemeSetting(String setting) {
-  appBrightness.value = switch (setting) {
+  _themeSetting = setting;
+  _ensureSystemObserver();
+  _refreshBrightness();
+}
+
+void _refreshBrightness() {
+  appBrightness.value = switch (_themeSetting) {
     'light' => Brightness.light,
     'dark' => Brightness.dark,
     _ => PlatformDispatcher.instance.platformBrightness,
   };
 }
 
+bool _observerAdded = false;
+final _BrightnessObserver _observer = _BrightnessObserver();
+
+void _ensureSystemObserver() {
+  if (_observerAdded) return;
+  _observerAdded = true;
+  WidgetsBinding.instance.addObserver(_observer);
+}
+
+/// Re-resolves the brightness when the OS theme flips, but only while the setting
+/// is `system` (so an explicit Light/Dark choice is never overridden).
+class _BrightnessObserver with WidgetsBindingObserver {
+  @override
+  void didChangePlatformBrightness() {
+    if (_themeSetting == 'system') _refreshBrightness();
+  }
+}
+
+NeodeskPalette get _active => paletteFor(appBrightness.value);
+
 /// Brightness-aware palette. Single source of truth for colour — widgets must
-/// not hardcode hex values. Each field forwards to the active [_Palette] so a
-/// theme switch re-colours everything. See DESIGN.md §2.1.
+/// not hardcode hex values. Each field forwards to the active [NeodeskPalette].
 class AppColors {
   AppColors._();
 
   // ---- Background / surface ----
-  static Color get bgBase => _p.bgBase;
-  static Color get bgElevated1 => _p.bgElevated1;
-  static Color get bgElevated2 => _p.bgElevated2;
-  static Color get bgInput => _p.bgInput;
+  static Color get bgBase => _active.bgBase;
+  static Color get bgElevated1 => _active.bgElevated1;
+  static Color get bgElevated2 => _active.bgElevated2;
+  static Color get bgInput => _active.bgInput;
 
   // ---- Accent ----
-  static Color get accent => _p.accent;
-  static Color get accentPressed => _p.accentPressed;
-  static Color get accentMuted => _p.accentMuted;
+  static Color get accent => _active.accent;
+  static Color get accentPressed => _active.accentPressed;
+  static Color get accentMuted => _active.accentMuted;
 
   // ---- Text ----
-  static Color get textPrimary => _p.textPrimary;
-  static Color get textSecondary => _p.textSecondary;
-  static Color get textDisabled => _p.textDisabled;
-  static Color get textOnAccent => _p.textOnAccent;
+  static Color get textPrimary => _active.textPrimary;
+  static Color get textSecondary => _active.textSecondary;
+  static Color get textDisabled => _active.textDisabled;
+  static Color get textOnAccent => _active.textOnAccent;
 
   // ---- Semantic ----
-  static Color get danger => _p.danger;
-  static Color get online => _p.online;
-  static Color get offline => _p.offline;
+  static Color get danger => _active.danger;
+  static Color get online => _active.online;
+  static Color get offline => _active.offline;
 
   // ---- Lines ----
-  static Color get divider => _p.divider;
-  static Color get border => _p.border;
+  static Color get divider => _active.divider;
+  static Color get border => _active.border;
 }
 
-/// Semi-transparent colours for the remote-session overlay chrome. Kept dark
-/// regardless of theme: the chrome floats over arbitrary remote video, where a
-/// dark scrim stays readable. (§2.1 note)
+/// Colours for the remote-session overlay chrome. Kept dark regardless of theme:
+/// these float over arbitrary remote video, where a dark scrim stays readable.
+/// (§2.1 note)
 class OverlayColors {
   OverlayColors._();
 
   static const barBg = Color(0xCC121212); // base @ 80%
   static const ballBg = Color(0xCC282828);
+
+  /// Background for the in-session keyboard / toolbar panels (combined with a
+  /// user opacity). Theme-independent dark for contrast over the remote video.
+  static const panelBg = Color(0xFF181818);
 }

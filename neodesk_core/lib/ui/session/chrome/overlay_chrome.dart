@@ -219,7 +219,7 @@ class OverlayChrome extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, // scroll instead of overflowing in landscape
-      backgroundColor: const Color(0xFF181818).withOpacity(opacity),
+      backgroundColor: OverlayColors.panelBg.withOpacity(opacity),
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           child: Column(
