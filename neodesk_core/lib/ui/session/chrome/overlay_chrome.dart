@@ -126,7 +126,7 @@ class OverlayChrome extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.tune, size: 14, color: AppColors.accent),
+              Icon(Icons.tune, size: 14, color: AppColors.accent),
               const SizedBox(width: 6),
               Text(controller.mode.label,
                   style:
@@ -283,10 +283,10 @@ class OverlayChrome extends StatelessWidget {
                         .androidAction(AndroidSystemAction.home)),
               ],
 
-              const Divider(height: 1, color: AppColors.divider),
+              Divider(height: 1, color: AppColors.divider),
               ListTile(
-                leading: const Icon(Icons.link_off, color: AppColors.danger),
-                title: const Text('Disconnect',
+                leading: Icon(Icons.link_off, color: AppColors.danger),
+                title: Text('Disconnect',
                     style: TextStyle(color: AppColors.danger)),
                 onTap: () {
                   Navigator.pop(ctx);

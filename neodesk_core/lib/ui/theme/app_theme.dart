@@ -4,23 +4,33 @@ import 'app_colors.dart';
 import 'app_typography.dart';
 import 'dimens.dart';
 
-/// Assembles the global dark [ThemeData]. See DESIGN.md §7.
+/// Assembles the global [ThemeData] for either brightness. See DESIGN.md §7.
+///
+/// Colours come from [AppColors], which forwards to the palette selected by
+/// `appBrightness`; callers build with the same brightness that is currently
+/// active, so the two stay in step.
 class AppTheme {
   AppTheme._();
 
-  static ThemeData dark() {
-    final scheme = const ColorScheme.dark(
+  static ThemeData dark() => build(Brightness.dark);
+  static ThemeData light() => build(Brightness.light);
+
+  static ThemeData build(Brightness brightness) {
+    final scheme = ColorScheme(
+      brightness: brightness,
       primary: AppColors.accent,
       onPrimary: AppColors.textOnAccent,
       secondary: AppColors.accent,
+      onSecondary: AppColors.textOnAccent,
       surface: AppColors.bgElevated1,
       onSurface: AppColors.textPrimary,
       error: AppColors.danger,
+      onError: Colors.white,
     ).copyWith(surfaceTint: Colors.transparent);
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: brightness,
       fontFamily: AppTypography.fontFamily,
       scaffoldBackgroundColor: AppColors.bgBase,
       canvasColor: AppColors.bgBase,
@@ -28,16 +38,16 @@ class AppTheme {
       textTheme: AppTypography.textTheme(),
       dividerColor: AppColors.divider,
       splashFactory: InkRipple.splashFactory,
-      iconTheme: const IconThemeData(color: AppColors.textPrimary),
-      bottomSheetTheme: const BottomSheetThemeData(
+      iconTheme: IconThemeData(color: AppColors.textPrimary),
+      bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.bgElevated2,
         modalBackgroundColor: AppColors.bgElevated2,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(Dimens.rSheet)),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.bgBase,
         selectedItemColor: AppColors.textPrimary,
         unselectedItemColor: AppColors.textDisabled,

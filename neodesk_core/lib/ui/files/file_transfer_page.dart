@@ -174,7 +174,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
           children: [
             _tabBar(),
             _pathBar(),
-            const Divider(height: 1, color: AppColors.divider),
+            Divider(height: 1, color: AppColors.divider),
             Expanded(child: _fileList()),
             if (_jobs.isNotEmpty) _jobsStrip(),
           ],
@@ -225,7 +225,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
                 tooltip: tr('Rename'),
                 onPressed: () => _rename(_selectedEntries.first)),
           IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+              icon: Icon(Icons.delete_outline, color: AppColors.danger),
               tooltip: tr('Delete'),
               onPressed: _selected.isEmpty ? null : _deleteSelected),
         ],
@@ -306,7 +306,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppColors.accent),
+            CircularProgressIndicator(color: AppColors.accent),
             const SizedBox(height: Dimens.s12),
             Text(_isLocal ? tr('Reading files…') : tr('Connecting…'),
                 style: AppTypography.caption),
@@ -349,7 +349,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
       trailing: _selectMode
           ? null
           : (e.isDir
-              ? const Icon(Icons.chevron_right,
+              ? Icon(Icons.chevron_right,
                   color: AppColors.textDisabled, size: 20)
               : Icon(_isLocal ? Icons.upload : Icons.download,
                   color: AppColors.accent, size: 20)),
@@ -360,7 +360,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
 
   Widget _jobsStrip() => Container(
         constraints: const BoxConstraints(maxHeight: 144),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.bgElevated1,
           border: Border(top: BorderSide(color: AppColors.divider)),
         ),
@@ -406,9 +406,9 @@ class _FileTransferPageState extends State<FileTransferPage> {
 
   Widget _jobStatus(TransferJob j) => switch (j.state) {
         TransferState.done =>
-          const Icon(Icons.check_circle, color: AppColors.online, size: 18),
+          Icon(Icons.check_circle, color: AppColors.online, size: 18),
         TransferState.error =>
-          const Icon(Icons.error_outline, color: AppColors.danger, size: 18),
+          Icon(Icons.error_outline, color: AppColors.danger, size: 18),
         _ => SizedBox(
             width: 56,
             child: LinearProgressIndicator(

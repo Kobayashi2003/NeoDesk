@@ -65,6 +65,9 @@ class FakeCore implements NeodeskCore {
   Future<bool> authenticateAppLock() async => true;
 
   @override
+  Future<void> setAppLockSecure(bool secure) async {}
+
+  @override
   Future<void> setVolumeKeyIntercept(
       {required bool up, required bool down}) async {}
 

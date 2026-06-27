@@ -26,6 +26,11 @@ import '../utils/image.dart' show ImagePainter;
 /// Single composition root over the real engine (mobile = one global session).
 final RustdeskCore neodeskCore = RustdeskCore();
 
+/// The OS-facing app name for the mobile neodesk build (Android task switcher /
+/// app identity), kept here so the branding lives in neodesk code rather than as
+/// a literal inside RustDesk's `main.dart`.
+const String neodeskAppName = 'neodesk';
+
 /// The Spotify-style dark theme used for the whole mobile app, so engine-spawned
 /// Material surfaces (dialogs, toasts, bottom sheets) match the neodesk UI
 /// instead of leaking RustDesk's light/system theme. See main.dart.
@@ -50,7 +55,7 @@ ThemeData neodeskAppTheme() {
       secondary: AppColors.accent,
       surface: AppColors.bgElevated2,
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
+    progressIndicatorTheme: ProgressIndicatorThemeData(
       color: AppColors.accent,
     ),
     // Give every engine-spawned dialog (password prompt, errors, confirmations)
@@ -60,12 +65,12 @@ ThemeData neodeskAppTheme() {
       surfaceTintColor: Colors.transparent,
       elevation: 12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         color: AppColors.textPrimary,
         fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
-      contentTextStyle: const TextStyle(
+      contentTextStyle: TextStyle(
         color: AppColors.textSecondary,
         fontSize: 15,
         height: 1.35,
@@ -97,6 +102,9 @@ void setupNeodesk() {
   bind.mainSetLocalOption(
       key: kCommConfKeyLang, value: lang == 'system' ? '' : lang);
   applyLocale(lang); // drive neodesk's own UI language (zh / ja)
+  // Drive neodesk's own light/dark theme (engine dialogs keep the app-wide one).
+  applyThemeSetting(
+      neodeskCore.config.get(ConfigKeys.theme, defaultValue: 'dark'));
   neodeskFrameOverride = (context) => const RustdeskFrameWidget();
   neodeskCanvasOverride = _RustdeskCanvasControl();
   neodeskCursorOverride = _RustdeskCursorControl();
@@ -170,14 +178,17 @@ class NeodeskEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild the whole neodesk UI when the Language setting changes.
+    // Rebuild the whole neodesk UI when the Language or Theme setting changes.
     return ValueListenableBuilder<AppLocale>(
       valueListenable: appLocale,
-      builder: (context, _, __) => Theme(
-        data: AppTheme.dark(),
-        child: AppLockGate(
-          core: neodeskCore,
-          child: HomeShell(core: neodeskCore),
+      builder: (context, _, __) => ValueListenableBuilder<Brightness>(
+        valueListenable: appBrightness,
+        builder: (context, brightness, __) => Theme(
+          data: AppTheme.build(brightness),
+          child: AppLockGate(
+            core: neodeskCore,
+            child: HomeShell(core: neodeskCore),
+          ),
         ),
       ),
     );

@@ -55,6 +55,12 @@ class _SettingsPageState extends State<SettingsPage> {
       sub: 'FPS, delay, bitrate, speed, codec'
     ),
   ];
+  // neodesk UI theme (engine dialogs keep the app-wide theme).
+  static const _themes = <_Option>[
+    (label: 'Follow system', value: 'system', sub: null),
+    (label: 'Light', value: 'light', sub: null),
+    (label: 'Dark', value: 'dark', sub: null),
+  ];
   // Engine dialog language (the neodesk UI itself stays English).
   static const _languages = <_Option>[
     (label: 'Follow system', value: 'system', sub: null),
@@ -99,6 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _volumeUp;
   late String _volumeDown;
   late String _language;
+  late String _theme;
   late bool _appLock;
   late String _qualityDetail;
 
@@ -128,6 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _volumeUp = _cfg.get(ConfigKeys.volumeUp, defaultValue: 'off');
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
+    _theme = _cfg.get(ConfigKeys.theme, defaultValue: 'dark');
     _appLock = _cfg.getBool(ConfigKeys.appLock);
     _qualityDetail =
         _cfg.get(ConfigKeys.qualityMonitorDetail, defaultValue: 'simple');
@@ -229,7 +237,7 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(children: [
-          const Icon(Icons.system_update, color: AppColors.accent),
+          Icon(Icons.system_update, color: AppColors.accent),
           const SizedBox(width: Dimens.s12),
           Expanded(child: Text('${tr('Update')} · v${info.version}')),
         ]),
@@ -272,7 +280,7 @@ class _SettingsPageState extends State<SettingsPage> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: Row(children: [
-          const Icon(Icons.download_rounded, color: AppColors.accent),
+          Icon(Icons.download_rounded, color: AppColors.accent),
           const SizedBox(width: Dimens.s12),
           Expanded(child: Text('${tr('Update')} · v${info.version}')),
         ]),
@@ -418,6 +426,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     (v) => setState(() => _volumeDown = v))),
           ]),
           _section('General', [
+            _row(Icons.palette_outlined, 'Theme',
+                value: _labelOf(_themes, _theme),
+                onTap: () => _pickOption('Theme', _themes,
+                    ConfigKeys.theme, _theme, (v) {
+                  setState(() => _theme = v);
+                  applyThemeSetting(v); // re-theme the neodesk UI live
+                })),
             _row(Icons.language, 'Language',
                 value: _labelOf(_languages, _language),
                 onTap: () => _pickOption('Language', _languages,
@@ -452,6 +467,7 @@ class _SettingsPageState extends State<SettingsPage> {
               if (!mounted) return;
               setState(() => _appLock = v);
               _cfg.setBool(ConfigKeys.appLock, v);
+              widget.core.setAppLockSecure(v); // FLAG_SECURE follows the setting
             }),
           ]),
           _section('About', [
@@ -490,7 +506,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   for (var i = 0; i < rows.length; i++) ...[
                     if (i > 0)
-                      const Divider(
+                      Divider(
                           height: 1,
                           thickness: 1,
                           indent: 56,
@@ -515,7 +531,7 @@ class _SettingsPageState extends State<SettingsPage> {
             if (value != null) Text(tr(value), style: AppTypography.caption),
             const SizedBox(width: 4),
             if (onTap != null)
-              const Icon(Icons.chevron_right,
+              Icon(Icons.chevron_right,
                   color: AppColors.textDisabled, size: 20),
           ],
         ),

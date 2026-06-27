@@ -67,4 +67,12 @@ abstract final class ConfigKeys {
   /// Detail level of the in-session quality-monitor overlay
   /// (`simple` = FPS + delay; `detailed` = + bitrate, network speed, codec).
   static const qualityMonitorDetail = 'neodesk.qualitymonitor.detail';
+
+  /// UI theme for neodesk's own surfaces (`system` follows the device, else
+  /// `light` / `dark`). Engine-spawned dialogs keep the app-wide theme.
+  static const theme = 'neodesk.theme';
+
+  /// Last-used remote-terminal font size in logical px (double, stored as text),
+  /// so the A-/A+ choice and pinch-zoom persist across terminal sessions.
+  static const terminalFontSize = 'neodesk.terminal.fontsize';
 }

@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:xterm/xterm.dart';
-import 'package:neodesk_core/neodesk_core.dart' show tr;
+import 'package:neodesk_core/neodesk_core.dart' show tr, ConfigKeys;
 import 'package:neodesk_core/ui/theme/app_colors.dart';
 
+import 'launcher.dart' show neodeskCore;
 import '../models/model.dart' show FFI;
 import '../models/terminal_model.dart';
 import '../desktop/pages/terminal_connection_manager.dart';
@@ -38,9 +39,16 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
   /// Sticky Ctrl: when armed, the next typed character is sent as its control
   /// code (so Ctrl+anything works from the soft keyboard, not just preset combos).
   bool _ctrlArmed = false;
-  double _fontSize = 14;
+  // Persisted so the A-/A+ choice and pinch-zoom carry across terminal sessions.
+  late double _fontSize = (double.tryParse(
+          neodeskCore.config.get(ConfigKeys.terminalFontSize)) ??
+      14)
+      .clamp(9.0, 26.0);
   bool _opened = false;
   Timer? _openPoll;
+
+  void _saveFont() => neodeskCore.config
+      .set(ConfigKeys.terminalFontSize, _fontSize.toStringAsFixed(1));
 
   @override
   void initState() {
@@ -113,8 +121,29 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
     if (text.isNotEmpty) _model.sendVirtualKey(text);
   }
 
-  void _setFont(double delta) =>
-      setState(() => _fontSize = (_fontSize + delta).clamp(9.0, 26.0));
+  void _setFont(double delta) {
+    setState(() => _fontSize = (_fontSize + delta).clamp(9.0, 26.0));
+    _saveFont();
+  }
+
+  /// Copy the current terminal selection to the clipboard (if any).
+  Future<void> _copySelection() async {
+    final sel = _model.terminalController.selection;
+    final text = sel == null ? '' : _model.terminal.buffer.getText(sel);
+    if (text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('Select text first')),
+            duration: const Duration(seconds: 1)));
+      }
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('Copied')), duration: const Duration(seconds: 1)));
+    }
+  }
 
   // Pinch-to-zoom: track raw pointers via a passive Listener (which never enters
   // the gesture arena, so it can't swallow TerminalView's tap/selection). While
@@ -148,7 +177,10 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
 
   void _onPointerUp(int pointer) {
     _pointers.remove(pointer);
-    if (_pointers.length < 2) _pinchStartDist = null;
+    if (_pointers.length < 2) {
+      if (_pinchStartDist != null) _saveFont(); // a pinch just ended
+      _pinchStartDist = null;
+    }
   }
 
   @override
@@ -167,6 +199,10 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
               onPressed: () => _setFont(1),
               icon: const Icon(Icons.text_increase)),
           IconButton(
+              tooltip: tr('Copy'),
+              onPressed: _copySelection,
+              icon: const Icon(Icons.copy)),
+          IconButton(
               tooltip: tr('Paste'),
               onPressed: _paste,
               icon: const Icon(Icons.content_paste)),
@@ -180,7 +216,7 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
         child: Column(
           children: [
             if (!_opened)
-              const LinearProgressIndicator(
+              LinearProgressIndicator(
                   minHeight: 2,
                   backgroundColor: AppColors.bgElevated1,
                   color: AppColors.accent),
@@ -230,7 +266,7 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
 
   Widget _extraKeys() => Container(
         height: 46,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.bgElevated1,
           border: Border(top: BorderSide(color: AppColors.divider)),
         ),

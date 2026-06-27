@@ -99,7 +99,7 @@ class _PeerListTileState extends State<PeerListTile> {
               StatusDot(online: widget.peer.online),
               if (widget.onMenu != null)
                 IconButton(
-                  icon: const Icon(Icons.more_vert,
+                  icon: Icon(Icons.more_vert,
                       color: AppColors.textSecondary),
                   onPressed: widget.onMenu,
                 ),
@@ -171,7 +171,7 @@ class _PeerShelfCardState extends State<PeerShelfCard> {
                     child: Icon(v.icon, color: v.tint, size: 30),
                   ),
                   const Spacer(),
-                  const Icon(Icons.star, color: AppColors.accent, size: 18),
+                  Icon(Icons.star, color: AppColors.accent, size: 18),
                 ],
               ),
               const Spacer(),

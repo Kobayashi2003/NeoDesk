@@ -103,7 +103,7 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
             for (final slot in GestureMap.editableSlots)
               ListTile(
                 leading:
-                    const Icon(Icons.gesture, color: AppColors.textSecondary),
+                    Icon(Icons.gesture, color: AppColors.textSecondary),
                 title: Text(slot.label, style: AppTypography.body),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -112,7 +112,7 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
                         style: AppTypography.caption
                             .copyWith(color: AppColors.accent)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.chevron_right,
+                    Icon(Icons.chevron_right,
                         color: AppColors.textDisabled, size: 20),
                   ],
                 ),

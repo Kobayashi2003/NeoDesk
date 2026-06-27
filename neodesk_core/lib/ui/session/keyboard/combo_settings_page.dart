@@ -161,7 +161,7 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
         onPressed: () => _addOrEdit(),
-        child: const Icon(Icons.add, color: AppColors.textOnAccent),
+        child: Icon(Icons.add, color: AppColors.textOnAccent),
       ),
       // Drag the handle to reorder; tap a row to edit. Explicit handles only
       // (no long-press-anywhere) so the row's tap-to-edit stays unambiguous.
@@ -173,7 +173,7 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
           final c = _combos[i];
           return ListTile(
             key: ObjectKey(c),
-            leading: const Icon(Icons.keyboard_command_key,
+            leading: Icon(Icons.keyboard_command_key,
                 color: AppColors.textSecondary),
             title: Text(c.label, style: AppTypography.body),
             trailing: Row(
@@ -181,14 +181,14 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
               children: [
                 ReorderableDragStartListener(
                   index: i,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: Dimens.s8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Dimens.s8),
                     child: Icon(Icons.drag_handle,
                         color: AppColors.textSecondary),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
+                  icon: Icon(Icons.delete_outline,
                       color: AppColors.textSecondary),
                   onPressed: () => _delete(i),
                 ),

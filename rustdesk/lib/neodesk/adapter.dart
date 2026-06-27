@@ -234,6 +234,13 @@ class RustdeskCore implements nd.NeodeskCore {
   }
 
   @override
+  Future<void> setAppLockSecure(bool secure) async {
+    try {
+      await _appLockChannel.invokeMethod('setSecure', {'secure': secure});
+    } catch (_) {}
+  }
+
+  @override
   Future<void> setVolumeKeyIntercept(
           {required bool up, required bool down}) =>
       _volkeyChannel.invokeMethod('set', {'up': up, 'down': down});

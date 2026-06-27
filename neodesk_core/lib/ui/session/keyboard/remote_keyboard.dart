@@ -321,7 +321,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
         color: const Color(0xFF181818).withOpacity(widget.opacity.clamp(0.4, 1)),
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(Dimens.rSheet)),
-        border: const Border(top: BorderSide(color: AppColors.border)),
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         top: false,

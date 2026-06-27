@@ -14,13 +14,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.ClipboardManager
-import android.app.KeyguardManager
-import android.app.PictureInPictureParams
 import android.os.Bundle
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import android.util.Rational
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.media.MediaCodecInfo
@@ -31,8 +28,6 @@ import android.media.MediaFormat
 import android.util.DisplayMetrics
 import android.net.Uri
 import androidx.annotation.RequiresApi
-import androidx.core.content.FileProvider
-import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 import com.hjq.permissions.XXPermissions
@@ -45,14 +40,6 @@ import kotlin.concurrent.thread
 class MainActivity : FlutterActivity() {
     companion object {
         var flutterMethodChannel: MethodChannel? = null
-        // Dedicated channel for neodesk's picture-in-picture (Moonlight-style
-        // small window): Flutter calls "enter"; native pushes "changed".
-        var pipChannel: MethodChannel? = null
-        // Volume-key interception: Flutter calls "set" {up,down}; native pushes
-        // "key" {key,phase} for each press while intercepting.
-        var volkeyChannel: MethodChannel? = null
-        @Volatile var interceptVolUp = false
-        @Volatile var interceptVolDown = false
         private var _rdClipboardManager: RdClipboardManager? = null
         val rdClipboardManager: RdClipboardManager?
             get() = _rdClipboardManager;
@@ -61,6 +48,10 @@ class MainActivity : FlutterActivity() {
     private val channelTag = "mChannel"
     private val logTag = "mMainActivity"
     private var mainService: MainService? = null
+
+    // All neodesk-specific native plumbing lives in the bridge (see NeodeskBridge),
+    // so this Activity stays close to upstream RustDesk.
+    private val neodesk = NeodeskBridge(this)
 
     private var isAudioStart = false
     private val audioRecordHandle = AudioRecordHandle(this, { false }, { isAudioStart })
@@ -77,49 +68,8 @@ class MainActivity : FlutterActivity() {
             channelTag
         )
         initFlutterChannel(flutterMethodChannel!!)
-        pipChannel = MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "neodesk/pip"
-        )
-        pipChannel!!.setMethodCallHandler { call, result ->
-            if (call.method == "enter") {
-                result.success(enterPip())
-            } else {
-                result.notImplemented()
-            }
-        }
-        volkeyChannel = MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "neodesk/volkey"
-        )
-        volkeyChannel!!.setMethodCallHandler { call, result ->
-            if (call.method == "set") {
-                interceptVolUp = call.argument<Boolean>("up") ?: false
-                interceptVolDown = call.argument<Boolean>("down") ?: false
-                result.success(null)
-            } else {
-                result.notImplemented()
-            }
-        }
-        // In-app update: launch the system package installer on a downloaded APK.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "neodesk/installapk")
-            .setMethodCallHandler { call, result ->
-                if (call.method == "install") {
-                    val path = call.argument<String>("path")
-                    result.success(if (path != null) installApk(path) else false)
-                } else {
-                    result.notImplemented()
-                }
-            }
-        // App lock: confirm the device credential (biometric / PIN / pattern).
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "neodesk/applock")
-            .setMethodCallHandler { call, result ->
-                if (call.method == "authenticate") {
-                    authenticateAppLock(result)
-                } else {
-                    result.notImplemented()
-                }
-            }
+        // Register neodesk's pip / volkey / installapk / applock channels.
+        neodesk.configureChannels(flutterEngine.dartExecutor.binaryMessenger)
         thread {
             try {
                 setCodecInfo()
@@ -140,47 +90,10 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // Intercept the volume keys natively when neodesk maps them, forwarding each
-    // press to Flutter and consuming it (so the system volume never changes).
-    // Doing this here — not via Flutter's HardwareKeyboard — avoids corrupting
-    // Flutter's pressed-key state, which silently stopped the interception.
+    // Volume-key interception is done natively (not via Flutter's HardwareKeyboard,
+    // which corrupts Flutter's pressed-key state); the bridge consumes the event.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val dir = when (event.keyCode) {
-            KeyEvent.KEYCODE_VOLUME_UP -> if (interceptVolUp) "up" else null
-            KeyEvent.KEYCODE_VOLUME_DOWN -> if (interceptVolDown) "down" else null
-            else -> null
-        }
-        if (dir != null) {
-            val phase = when {
-                event.action == KeyEvent.ACTION_UP -> "up"
-                event.repeatCount > 0 -> "repeat"
-                else -> "down"
-            }
-            activity.runOnUiThread {
-                volkeyChannel?.invokeMethod(
-                    "key", mapOf("key" to dir, "phase" to phase))
-            }
-            return true
-        }
-        return super.dispatchKeyEvent(event)
-    }
-
-    // Launch the system package installer on a downloaded APK (via a FileProvider
-    // content:// URI). The user is prompted to allow "install unknown apps" the
-    // first time. Returns false if the intent couldn't be started.
-    private fun installApk(path: String): Boolean {
-        return try {
-            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", File(path))
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            true
-        } catch (e: Exception) {
-            Log.e("MainActivity", "installApk failed: ${e.message}", e)
-            false
-        }
+        return neodesk.dispatchKeyEvent(event) || super.dispatchKeyEvent(event)
     }
 
     private fun requestMediaProjection() {
@@ -195,28 +108,7 @@ class MainActivity : FlutterActivity() {
         if (requestCode == REQ_INVOKE_PERMISSION_ACTIVITY_MEDIA_PROJECTION && resultCode == RES_FAILED) {
             flutterMethodChannel?.invokeMethod("on_media_projection_canceled", null)
         }
-        if (requestCode == reqAppLock) {
-            appLockResult?.success(resultCode == RESULT_OK)
-            appLockResult = null
-        }
-    }
-
-    // App lock: prompt the system credential confirmation (biometric / PIN /
-    // pattern). Returns false (via the channel) if the device has no secure lock
-    // set, or when the user cancels.
-    private val reqAppLock = 0xA10C
-    private var appLockResult: MethodChannel.Result? = null
-
-    private fun authenticateAppLock(result: MethodChannel.Result) {
-        val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        val secure = if (Build.VERSION.SDK_INT >= 23) km.isDeviceSecure else km.isKeyguardSecure
-        if (!secure) { result.success(false); return }
-        val intent = km.createConfirmDeviceCredentialIntent(
-            "Unlock NeoDesk", "Confirm your identity to continue")
-        if (intent == null) { result.success(false); return }
-        appLockResult?.success(false) // resolve any stale pending request
-        appLockResult = result
-        startActivityForResult(intent, reqAppLock)
+        neodesk.onActivityResult(requestCode, resultCode)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -403,27 +295,12 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun enterPip(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
-        return try {
-            val params = PictureInPictureParams.Builder()
-                .setAspectRatio(Rational(16, 9))
-                .build()
-            enterPictureInPictureMode(params)
-        } catch (e: Exception) {
-            Log.e(logTag, "enterPip failed: ${e.message}", e)
-            false
-        }
-    }
-
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
         newConfig: android.content.res.Configuration
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        activity.runOnUiThread {
-            pipChannel?.invokeMethod("changed", isInPictureInPictureMode)
-        }
+        neodesk.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
 
     private fun setCodecInfo() {

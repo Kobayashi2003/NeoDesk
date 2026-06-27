@@ -97,7 +97,7 @@ void showGestureHelp(BuildContext context, InteractionUiMode mode) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                const Icon(Icons.gesture, color: AppColors.accent),
+                Icon(Icons.gesture, color: AppColors.accent),
                 const SizedBox(width: Dimens.s8),
                 Text(trArg('{} gestures', mode.label),
                     style: AppTypography.title),

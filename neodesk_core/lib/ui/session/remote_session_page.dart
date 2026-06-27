@@ -78,6 +78,10 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   late final String _volUp;
   late final String _volDown;
   StreamSubscription<VolumeKeyEvent>? _volSub;
+  // Volume-key actions currently held down (modifiers / mouse buttons / keys, but
+  // not the momentary scroll actions), so they can be released if the page is
+  // disposed mid-hold — otherwise the remote keeps the modifier/button stuck down.
+  final Set<String> _heldVol = {};
   static const _modVk = {
     'ctrl': 'VK_CONTROL',
     'alt': 'VK_MENU',
@@ -104,6 +108,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
 
   void _volPress(String action) {
     final input = _c.input;
+    if (action != 'scrollUp' && action != 'scrollDown') _heldVol.add(action);
     switch (action) {
       case 'scrollUp':
         _c.scrollBy(-1);
@@ -122,6 +127,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
 
   void _volRelease(String action) {
     final input = _c.input;
+    _heldVol.remove(action);
     switch (action) {
       case 'left':
         input.pointerUp(MouseButton.left);
@@ -167,6 +173,11 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   @override
   void dispose() {
     if (_volUp != 'off' || _volDown != 'off') {
+      // Release anything still held (e.g. disposed while a volume-as-Ctrl is
+      // down) before tearing the session down, so it doesn't stick on the remote.
+      for (final a in _heldVol.toList()) {
+        _volRelease(a);
+      }
       widget.core.setVolumeKeyIntercept(up: false, down: false);
       _volSub?.cancel();
     }
@@ -263,7 +274,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 44,
                 height: 44,
                 child: CircularProgressIndicator(
@@ -278,7 +289,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
                 TextButton(
                   onPressed: _close,
                   child: Text(tr('Cancel'),
-                      style: const TextStyle(color: AppColors.textSecondary)),
+                      style: TextStyle(color: AppColors.textSecondary)),
                 ),
               ],
             ],
@@ -293,7 +304,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
+              Icon(Icons.error_outline,
                   color: AppColors.danger, size: 48),
               const SizedBox(height: Dimens.s16),
               Text(tr('Connection failed'), style: AppTypography.title),

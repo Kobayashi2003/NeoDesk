@@ -123,7 +123,7 @@ class _FloatingBallState extends State<FloatingBall> {
                       color: Colors.black54, blurRadius: 8, offset: Offset(0, 2)),
                 ],
               ),
-              child: const Icon(Icons.drag_indicator, color: AppColors.accent),
+              child: Icon(Icons.drag_indicator, color: AppColors.accent),
             ),
           ),
         ),

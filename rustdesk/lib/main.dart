@@ -502,9 +502,14 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         child: GetMaterialApp(
           navigatorKey: globalKey,
           debugShowCheckedModeBanner: false,
-          title: isWeb
-              ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
-              : bind.mainGetAppNameSync(),
+          // Mobile is the neodesk-branded build, so the OS-facing app name (the
+          // Android task switcher / app identity) is "neodesk", not the engine's
+          // "RustDesk". Desktop/web keep the engine app name.
+          title: _isNeodeskMobile
+              ? neodeskAppName
+              : isWeb
+                  ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
+                  : bind.mainGetAppNameSync(),
           // Mobile runs the redesigned neodesk UI; force its Spotify-style dark
           // theme app-wide so engine dialogs/toasts/sheets stay consistent
           // (don't follow RustDesk's light/system theme). Desktop/web keep the

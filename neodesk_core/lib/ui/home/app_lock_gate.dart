@@ -33,6 +33,8 @@ class _AppLockGateState extends State<AppLockGate>
     if (!_lockEnabled) {
       _unlocked = true;
     } else {
+      // Blank the remote content in the recent-apps thumbnail while locked.
+      widget.core.setAppLockSecure(true);
       WidgetsBinding.instance.addPostFrameCallback((_) => _authenticate());
     }
   }
@@ -76,13 +78,13 @@ class _AppLockGateState extends State<AppLockGate>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline,
+            Icon(Icons.lock_outline,
                 size: 56, color: AppColors.textSecondary),
             const SizedBox(height: Dimens.s16),
             Text(tr('NeoDesk is locked'), style: AppTypography.body),
             const SizedBox(height: Dimens.s24),
             if (_authing)
-              const CircularProgressIndicator(color: AppColors.accent)
+              CircularProgressIndicator(color: AppColors.accent)
             else
               ElevatedButton.icon(
                 onPressed: _authenticate,

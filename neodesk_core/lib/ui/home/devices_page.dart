@@ -29,7 +29,9 @@ class _DevicesPageState extends State<DevicesPage> {
   final _idFocus = FocusNode();
   bool _lanExpanded = false;
 
-  // Mirror of the current favorite ids, so the peer menu can offer add vs remove.
+  // Single source of truth for favorites: one subscription feeds both the shelf
+  // and the peer menu's add/remove choice (no separate StreamBuilder).
+  List<PeerEntry> _favorites = const [];
   final Set<String> _favIds = {};
   StreamSubscription<List<PeerEntry>>? _favSub;
 
@@ -38,9 +40,12 @@ class _DevicesPageState extends State<DevicesPage> {
     super.initState();
     _favSub = widget.core.peers.favorites.listen((favs) {
       if (!mounted) return;
-      setState(() => _favIds
-        ..clear()
-        ..addAll(favs.map((p) => p.id)));
+      setState(() {
+        _favorites = favs;
+        _favIds
+          ..clear()
+          ..addAll(favs.map((p) => p.id));
+      });
     });
   }
 
@@ -211,8 +216,8 @@ class _DevicesPageState extends State<DevicesPage> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: tr('Enter device ID'),
-                    hintStyle: const TextStyle(color: AppColors.textDisabled),
-                    icon: const Icon(Icons.search,
+                    hintStyle: TextStyle(color: AppColors.textDisabled),
+                    icon: Icon(Icons.search,
                         color: AppColors.textSecondary),
                   ),
                 ),
@@ -225,33 +230,28 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
       );
 
-  Widget _favoritesShelf() => StreamBuilder<List<PeerEntry>>(
-        stream: widget.core.peers.favorites,
-        builder: (context, snap) {
-          final items = snap.data ?? const [];
-          if (items.isEmpty) return const SizedBox.shrink();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionHeader(title: tr('Favorites')),
-              SizedBox(
-                height: 148,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: Dimens.pageInset),
-                  itemCount: items.length,
-                  itemBuilder: (_, i) => PeerShelfCard(
-                    peer: items[i],
-                    onTap: () => _connect(items[i].id),
-                    onMenu: () => _peerMenu(items[i]),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
+  Widget _favoritesShelf() {
+    if (_favorites.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: tr('Favorites')),
+        SizedBox(
+          height: 148,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.pageInset),
+            itemCount: _favorites.length,
+            itemBuilder: (_, i) => PeerShelfCard(
+              peer: _favorites[i],
+              onTap: () => _connect(_favorites[i].id),
+              onMenu: () => _peerMenu(_favorites[i]),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _recentList() => StreamBuilder<List<PeerEntry>>(
         stream: widget.core.peers.recent,

@@ -68,6 +68,11 @@ abstract interface class NeodeskCore {
   /// Returns true in demo (no lock).
   Future<bool> authenticateAppLock();
 
+  /// While the app lock is on, mark the window secure (`FLAG_SECURE`) so remote
+  /// content is excluded from the recent-apps thumbnail and screenshots. No-op
+  /// off Android / in demo.
+  Future<void> setAppLockSecure(bool secure);
+
   /// Ask the platform to intercept the volume Up/Down keys (so they don't change
   /// system volume) and report presses via [volumeKeyEvents]. Pass false/false to
   /// stop. No-op off Android / in demo. Intercepting natively (not via Flutter's
