@@ -116,6 +116,41 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
   void _setFont(double delta) =>
       setState(() => _fontSize = (_fontSize + delta).clamp(9.0, 26.0));
 
+  // Pinch-to-zoom: track raw pointers via a passive Listener (which never enters
+  // the gesture arena, so it can't swallow TerminalView's tap/selection). While
+  // two fingers are down, scale the font by the change in finger distance.
+  final Map<int, Offset> _pointers = {};
+  double? _pinchStartDist;
+  double _pinchStartFont = 14;
+
+  double _pointerDistance() {
+    final pts = _pointers.values.toList();
+    return (pts[0] - pts[1]).distance;
+  }
+
+  void _onPointerDown(PointerDownEvent e) {
+    _pointers[e.pointer] = e.position;
+    if (_pointers.length == 2) {
+      _pinchStartDist = _pointerDistance();
+      _pinchStartFont = _fontSize;
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent e) {
+    if (!_pointers.containsKey(e.pointer)) return;
+    _pointers[e.pointer] = e.position;
+    final start = _pinchStartDist;
+    if (_pointers.length == 2 && start != null && start > 0) {
+      final next = (_pinchStartFont * _pointerDistance() / start).clamp(9.0, 26.0);
+      if (next != _fontSize) setState(() => _fontSize = next);
+    }
+  }
+
+  void _onPointerUp(int pointer) {
+    _pointers.remove(pointer);
+    if (_pointers.length < 2) _pinchStartDist = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,16 +186,23 @@ class _NeodeskTerminalPageState extends State<_NeodeskTerminalPage> {
                   color: AppColors.accent),
             Expanded(
               // TerminalView handles its own tap (focus + cursor/selection); the
-              // keyboard button covers explicit show/hide. No outer GestureDetector
-              // (it would compete in the gesture arena and swallow taps).
-              child: TerminalView(
-                _model.terminal,
-                controller: _model.terminalController,
-                focusNode: _focusNode,
-                autofocus: true,
-                backgroundOpacity: 0, // show the neodesk scaffold colour
-                textStyle: TerminalStyle(fontSize: _fontSize),
-                padding: const EdgeInsets.all(8),
+              // keyboard button covers explicit show/hide. We wrap it in a passive
+              // Listener (not a GestureDetector) for pinch-zoom so we never
+              // compete in the gesture arena and swallow taps.
+              child: Listener(
+                onPointerDown: _onPointerDown,
+                onPointerMove: _onPointerMove,
+                onPointerUp: (e) => _onPointerUp(e.pointer),
+                onPointerCancel: (e) => _onPointerUp(e.pointer),
+                child: TerminalView(
+                  _model.terminal,
+                  controller: _model.terminalController,
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  backgroundOpacity: 0, // show the neodesk scaffold colour
+                  textStyle: TerminalStyle(fontSize: _fontSize),
+                  padding: const EdgeInsets.all(8),
+                ),
               ),
             ),
             _extraKeys(),

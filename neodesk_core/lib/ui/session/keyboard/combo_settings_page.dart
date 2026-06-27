@@ -42,6 +42,15 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
     _save();
   }
 
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      // ReorderableListView reports newIndex as the slot *before* removal.
+      if (newIndex > oldIndex) newIndex -= 1;
+      _combos.insert(newIndex, _combos.removeAt(oldIndex));
+    });
+    _save();
+  }
+
   void _addOrEdit([int? index]) {
     final editing = index != null ? _combos[index] : null;
     final mods = {...?editing?.mods};
@@ -154,18 +163,36 @@ class _ComboSettingsPageState extends State<ComboSettingsPage> {
         onPressed: () => _addOrEdit(),
         child: const Icon(Icons.add, color: AppColors.textOnAccent),
       ),
-      body: ListView.builder(
+      // Drag the handle to reorder; tap a row to edit. Explicit handles only
+      // (no long-press-anywhere) so the row's tap-to-edit stays unambiguous.
+      body: ReorderableListView.builder(
+        buildDefaultDragHandles: false,
         itemCount: _combos.length,
+        onReorder: _reorder,
         itemBuilder: (context, i) {
           final c = _combos[i];
           return ListTile(
+            key: ObjectKey(c),
             leading: const Icon(Icons.keyboard_command_key,
                 color: AppColors.textSecondary),
             title: Text(c.label, style: AppTypography.body),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: AppColors.textSecondary),
-              onPressed: () => _delete(i),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ReorderableDragStartListener(
+                  index: i,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: Dimens.s8),
+                    child: Icon(Icons.drag_handle,
+                        color: AppColors.textSecondary),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: AppColors.textSecondary),
+                  onPressed: () => _delete(i),
+                ),
+              ],
             ),
             onTap: () => _addOrEdit(i),
           );
