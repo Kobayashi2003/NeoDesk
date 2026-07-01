@@ -206,9 +206,11 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
         _held.add(token);
         _holdArmed = false;
       });
+      _applyHeldMods(); // keep the meta flag set while Win is held (see below)
     } else if (_held.contains(token)) {
       widget.input.key(vk, down: false, press: false); // re-tap releases (keyup)
       setState(() => _held.remove(token));
+      _applyHeldMods();
     } else {
       widget.input.key(vk, press: true); // momentary tap (held modifiers apply)
     }
@@ -238,11 +240,18 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   }
 
   /// Re-assert the engine modifier flags from the currently-held modifiers.
+  ///
+  /// Win is a real key held via [_tapKey] (token `Meta`), not a `mod:` modifier —
+  /// but the engine sends every key event with the current modifier flags and the
+  /// remote re-syncs held modifiers to match. So while Win is held, `meta` MUST
+  /// stay true: otherwise the next key (e.g. holding Shift) would go out with
+  /// `command:false`, the remote would release the held Win to match, and a lone
+  /// Win down→up registers as a tap → the Start menu wrongly opens.
   void _applyHeldMods() => widget.input.setModifiers(
         ctrl: _held.contains('mod:ctrl'),
         alt: _held.contains('mod:alt'),
         shift: _held.contains('mod:shift'),
-        meta: _held.contains('mod:meta'),
+        meta: _held.contains('mod:meta') || _held.contains('Meta'),
       );
 
   /// One-shot chord via engine modifier flags: set them, tap the key, then
@@ -317,8 +326,9 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        // User-tunable opacity over the dark panel, so the remote shows through.
-        color: OverlayColors.panelBg.withOpacity(widget.opacity.clamp(0.4, 1)),
+        // User-tunable opacity over the panel, so the remote shows through. Uses
+        // the themed surface so the panel follows Light/Dark like the rest of the UI.
+        color: AppColors.bgElevated1.withOpacity(widget.opacity.clamp(0.4, 1)),
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(Dimens.rSheet)),
         border: Border(top: BorderSide(color: AppColors.border)),

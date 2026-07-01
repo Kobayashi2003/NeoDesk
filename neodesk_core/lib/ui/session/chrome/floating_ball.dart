@@ -115,7 +115,7 @@ class _FloatingBallState extends State<FloatingBall> {
               width: _size,
               height: _size,
               decoration: BoxDecoration(
-                color: OverlayColors.ballBg,
+                color: AppColors.bgElevated2.withOpacity(0.9),
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.accent.withOpacity(0.7)),
                 boxShadow: const [

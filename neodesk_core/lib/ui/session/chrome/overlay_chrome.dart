@@ -73,7 +73,7 @@ class OverlayChrome extends StatelessWidget {
   // only the content, so it stays correct in portrait *and* landscape (where the
   // notch and gesture insets move to the sides).
   Widget _topBar(BuildContext context) => Container(
-        decoration: const BoxDecoration(color: OverlayColors.barBg),
+        decoration: BoxDecoration(color: AppColors.bgBase.withOpacity(0.9)),
         child: SafeArea(
           bottom: false,
           minimum: const EdgeInsets.fromLTRB(
@@ -137,7 +137,7 @@ class OverlayChrome extends StatelessWidget {
       );
 
   Widget _bottomBar(BuildContext context) => Container(
-        decoration: const BoxDecoration(color: OverlayColors.barBg),
+        decoration: BoxDecoration(color: AppColors.bgBase.withOpacity(0.9)),
         child: SafeArea(
           top: false,
           minimum: const EdgeInsets.symmetric(horizontal: Dimens.s8),
@@ -219,7 +219,7 @@ class OverlayChrome extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, // scroll instead of overflowing in landscape
-      backgroundColor: OverlayColors.panelBg.withOpacity(opacity),
+      backgroundColor: AppColors.bgElevated2.withOpacity(opacity),
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           child: Column(

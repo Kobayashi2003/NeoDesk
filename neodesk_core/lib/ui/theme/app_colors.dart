@@ -154,17 +154,3 @@ class AppColors {
   static Color get divider => _active.divider;
   static Color get border => _active.border;
 }
-
-/// Colours for the remote-session overlay chrome. Kept dark regardless of theme:
-/// these float over arbitrary remote video, where a dark scrim stays readable.
-/// (§2.1 note)
-class OverlayColors {
-  OverlayColors._();
-
-  static const barBg = Color(0xCC121212); // base @ 80%
-  static const ballBg = Color(0xCC282828);
-
-  /// Background for the in-session keyboard / toolbar panels (combined with a
-  /// user opacity). Theme-independent dark for contrast over the remote video.
-  static const panelBg = Color(0xFF181818);
-}
