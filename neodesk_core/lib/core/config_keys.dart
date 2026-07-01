@@ -50,6 +50,10 @@ abstract final class ConfigKeys {
   /// full width-filling grid (bool).
   static const keyCompact = 'neodesk.kbd.compact';
 
+  /// Wide keys: size each Fn/Combos key to its label in horizontally-scrollable
+  /// rows so long labels aren't clipped (bool).
+  static const keyWide = 'neodesk.kbd.wide';
+
   /// What each phone volume key does during a session — an action token (`off`,
   /// `scrollUp`/`scrollDown`, `left`/`right`, a modifier `ctrl`/`alt`/`shift`/
   /// `meta`, or a `VK_*` key). When not `off` the key is consumed (no system
@@ -75,4 +79,12 @@ abstract final class ConfigKeys {
   /// Last-used remote-terminal font size in logical px (double, stored as text),
   /// so the A-/A+ choice and pinch-zoom persist across terminal sessions.
   static const terminalFontSize = 'neodesk.terminal.fontsize';
+
+  /// Auto-enter picture-in-picture (small window) when the app is backgrounded
+  /// during an active session (bool).
+  static const autoPip = 'neodesk.autopip';
+
+  /// Ask for confirmation before disconnecting an active session (bool, default
+  /// on). Off = leaving/back/Disconnect closes the session immediately.
+  static const confirmDisconnect = 'neodesk.confirmdisconnect';
 }

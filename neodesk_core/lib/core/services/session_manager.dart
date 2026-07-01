@@ -32,6 +32,12 @@ abstract interface class NeodeskCore {
   /// so the remote keeps streaming over other apps. No-op off Android / in demo.
   Future<void> enterPictureInPicture();
 
+  /// Arm/disarm automatically entering picture-in-picture when the app is sent to
+  /// the background (Home / app-switch) — only meaningful during an active
+  /// session, so the session page arms it on connect and disarms on close.
+  /// No-op off Android / in demo.
+  Future<void> setAutoPictureInPicture(bool enabled);
+
   /// Emits true when the app enters picture-in-picture and false when it leaves,
   /// so the session can hide its chrome/floating handle while in the small window.
   Stream<bool> get pictureInPictureMode;

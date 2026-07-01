@@ -42,14 +42,23 @@ class NeodeskBridge(private val activity: FlutterActivity) {
 
     @Volatile private var interceptVolUp = false
     @Volatile private var interceptVolDown = false
+    // Armed (only while a session is active) to auto-enter PiP when backgrounded.
+    private var autoPipArmed = false
 
     /// Register the neodesk method channels on the Flutter engine.
     fun configureChannels(messenger: BinaryMessenger) {
-        // Picture-in-picture (Moonlight-style small window): Flutter calls "enter".
+        // Picture-in-picture (Moonlight-style small window): Flutter calls "enter"
+        // to enter now, or "setAuto" to arm auto-entering PiP on background.
         pipChannel = MethodChannel(messenger, "neodesk/pip").apply {
             setMethodCallHandler { call, result ->
-                if (call.method == "enter") result.success(enterPip())
-                else result.notImplemented()
+                when (call.method) {
+                    "enter" -> result.success(enterPip())
+                    "setAuto" -> {
+                        setAutoPip(call.argument<Boolean>("enabled") ?: false)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
             }
         }
         // Volume-key interception: Flutter calls "set" {up,down}.
@@ -116,6 +125,15 @@ class NeodeskBridge(private val activity: FlutterActivity) {
         }
     }
 
+    // The user is leaving (Home / app switch). On API < 31 (where auto-enter isn't
+    // available) enter PiP here if armed. On 31+ the system handles it via
+    // setAutoEnterEnabled, so this is a no-op.
+    fun onUserLeaveHint() {
+        if (autoPipArmed && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            enterPip()
+        }
+    }
+
     // ---- Implementations ----
 
     private fun enterPip(): Boolean {
@@ -128,6 +146,24 @@ class NeodeskBridge(private val activity: FlutterActivity) {
         } catch (e: Exception) {
             Log.e(logTag, "enterPip failed: ${e.message}", e)
             false
+        }
+    }
+
+    // Arm/disarm auto-entering PiP when the app is backgrounded. On API 31+ this
+    // is seamless (the OS enters PiP on leave, incl. gesture nav); on older APIs
+    // the flag is used by [onUserLeaveHint].
+    private fun setAutoPip(armed: Boolean) {
+        autoPipArmed = armed
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                activity.setPictureInPictureParams(
+                    PictureInPictureParams.Builder()
+                        .setAspectRatio(Rational(16, 9))
+                        .setAutoEnterEnabled(armed)
+                        .build())
+            } catch (e: Exception) {
+                Log.e(logTag, "setAutoPip failed: ${e.message}", e)
+            }
         }
     }
 

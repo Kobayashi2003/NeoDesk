@@ -42,6 +42,9 @@ class FakeCore implements NeodeskCore {
   Future<void> enterPictureInPicture() async {}
 
   @override
+  Future<void> setAutoPictureInPicture(bool enabled) async {}
+
+  @override
   Stream<bool> get pictureInPictureMode => const Stream.empty();
 
   @override

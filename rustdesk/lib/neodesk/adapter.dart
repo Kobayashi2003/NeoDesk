@@ -101,6 +101,13 @@ class RustdeskCore implements nd.NeodeskCore {
   }
 
   @override
+  Future<void> setAutoPictureInPicture(bool enabled) async {
+    try {
+      await _pipChannel.invokeMethod('setAuto', {'enabled': enabled});
+    } catch (_) {}
+  }
+
+  @override
   Stream<bool> get pictureInPictureMode => _pip.stream;
 
   static const _releasesApi =

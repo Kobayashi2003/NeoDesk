@@ -303,6 +303,11 @@ class MainActivity : FlutterActivity() {
         neodesk.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        neodesk.onUserLeaveHint()
+    }
+
     private fun setCodecInfo() {
         val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
         val codecs = codecList.codecInfos

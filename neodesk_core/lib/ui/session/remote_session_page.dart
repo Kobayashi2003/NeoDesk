@@ -64,6 +64,9 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
     // (they swipe back temporarily). Restored on dispose.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     final cfg = widget.core.config;
+    _autoPip = cfg.getBool(ConfigKeys.autoPip);
+    _confirmDisconnect =
+        cfg.getBool(ConfigKeys.confirmDisconnect, defaultValue: true);
     _volUp = cfg.get(ConfigKeys.volumeUp, defaultValue: 'off');
     _volDown = cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     if (_volUp != 'off' || _volDown != 'off') {
@@ -77,6 +80,10 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
 
   late final String _volUp;
   late final String _volDown;
+  // Auto-enter PiP when backgrounded, armed only while this session is alive.
+  late final bool _autoPip;
+  // Ask before tearing down a live session (back gesture / toolbar / Disconnect).
+  late final bool _confirmDisconnect;
   StreamSubscription<VolumeKeyEvent>? _volSub;
   // Volume-key actions currently held down (modifiers / mouse buttons / keys, but
   // not the momentary scroll actions), so they can be released if the page is
@@ -157,6 +164,8 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   void _onPhase(SessionPhase p) {
     if (p == SessionPhase.connected) {
       _c.flashChrome();
+      // Arm auto-PiP now there's a live stream (idempotent across reconnects).
+      if (_autoPip) widget.core.setAutoPictureInPicture(true);
     } else if (p == SessionPhase.closed && !_c.reconnecting && !_popped) {
       _popped = true;
       // Use pop(), not maybePop(): the PopScope(canPop: false) below blocks
@@ -167,6 +176,27 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
   }
 
   Future<void> _close() async {
+    // Confirm only when there's a live session to lose; cancelling a still-
+    // connecting attempt (or an errored one) closes straight away.
+    if (_confirmDisconnect && _c.isConnected && mounted) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(tr('Disconnect?')),
+          content: Text(tr('End the remote session?')),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(tr('Cancel'))),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(tr('Disconnect'),
+                    style: TextStyle(color: AppColors.danger))),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
     await _c.disconnect();
   }
 
@@ -181,6 +211,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
       widget.core.setVolumeKeyIntercept(up: false, down: false);
       _volSub?.cancel();
     }
+    if (_autoPip) widget.core.setAutoPictureInPicture(false); // disarm on leave
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _phaseSub?.cancel();
     _c.dispose();
@@ -370,6 +401,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
                   keySize: _c.core.config
                       .get(ConfigKeys.keySize, defaultValue: 'medium'),
                   compact: _c.core.config.getBool(ConfigKeys.keyCompact),
+                  wide: _c.core.config.getBool(ConfigKeys.keyWide),
                 ),
               ),
             ),

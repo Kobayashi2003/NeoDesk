@@ -102,11 +102,14 @@ class _SettingsPageState extends State<SettingsPage> {
   late double _panelOpacity; // panel.opacity
   late String _keySize;
   late bool _keyCompact;
+  late bool _keyWide;
   late String _volumeUp;
   late String _volumeDown;
   late String _language;
   late String _theme;
   late bool _appLock;
+  late bool _autoPip;
+  late bool _confirmDisconnect;
   late String _qualityDetail;
 
   /// Which slider row is currently expanded (accordion; null = all collapsed).
@@ -132,11 +135,15 @@ class _SettingsPageState extends State<SettingsPage> {
         .clamp(_opacityMin, _opacityMax);
     _keySize = _cfg.get(ConfigKeys.keySize, defaultValue: 'medium');
     _keyCompact = _cfg.getBool(ConfigKeys.keyCompact);
+    _keyWide = _cfg.getBool(ConfigKeys.keyWide);
     _volumeUp = _cfg.get(ConfigKeys.volumeUp, defaultValue: 'off');
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
     _theme = _cfg.get(ConfigKeys.theme, defaultValue: 'dark');
     _appLock = _cfg.getBool(ConfigKeys.appLock);
+    _autoPip = _cfg.getBool(ConfigKeys.autoPip);
+    _confirmDisconnect =
+        _cfg.getBool(ConfigKeys.confirmDisconnect, defaultValue: true);
     _qualityDetail =
         _cfg.get(ConfigKeys.qualityMonitorDetail, defaultValue: 'simple');
     // Show the real installed version (Android's versionName), not the
@@ -414,6 +421,11 @@ class _SettingsPageState extends State<SettingsPage> {
               setState(() => _keyCompact = v);
               _cfg.setBool(ConfigKeys.keyCompact, v);
             }),
+            _switchRow(Icons.width_normal, 'Wide keys (show full labels)',
+                _keyWide, (v) {
+              setState(() => _keyWide = v);
+              _cfg.setBool(ConfigKeys.keyWide, v);
+            }),
             _row(Icons.volume_up_outlined, 'Volume Up key',
                 value: _labelOf(_volumeActions, _volumeUp),
                 onTap: () => _pickOption('Volume Up key', _volumeActions,
@@ -449,6 +461,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     ConfigKeys.qualityMonitorDetail,
                     _qualityDetail,
                     (v) => setState(() => _qualityDetail = v))),
+            _switchRow(Icons.picture_in_picture_alt_outlined,
+                'Auto small window in background', _autoPip, (v) {
+              setState(() => _autoPip = v);
+              _cfg.setBool(ConfigKeys.autoPip, v);
+            }),
+            _switchRow(Icons.logout, 'Confirm before disconnecting',
+                _confirmDisconnect, (v) {
+              setState(() => _confirmDisconnect = v);
+              _cfg.setBool(ConfigKeys.confirmDisconnect, v);
+            }),
             _switchRow(
                 Icons.lock_outline, 'App lock (require unlock)', _appLock,
                 (v) async {

@@ -38,6 +38,7 @@ class RemoteKeyboard extends StatefulWidget {
     this.opacity = 0.9,
     this.keySize = 'medium',
     this.compact = false,
+    this.wide = false,
   });
 
   final InputSink input;
@@ -60,6 +61,10 @@ class RemoteKeyboard extends StatefulWidget {
 
   /// Compact layout: fewer, horizontally-scrollable rows instead of the grid.
   final bool compact;
+
+  /// Wide keys: each key sizes to its label in scrollable rows, so long labels
+  /// (e.g. multi-modifier combos) show in full instead of being ellipsised.
+  final bool wide;
 
   @override
   State<RemoteKeyboard> createState() => _RemoteKeyboardState();
@@ -416,6 +421,14 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     ];
     final fns = [for (var i = 1; i <= 12; i++) _vk('F$i', 'VK_F$i')];
 
+    if (widget.wide) {
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        _wideRow(mods),
+        _wideRow(edit),
+        _wideRow(nav),
+        _wideRow(fns),
+      ]);
+    }
     if (widget.compact) {
       return Column(mainAxisSize: MainAxisSize.min, children: [
         _scrollRow([...mods, ...edit, ...nav]),
@@ -437,6 +450,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
       for (final c in widget.combos) _button(c.label, () => _combo(c)),
     ];
     if (keys.isEmpty) return const SizedBox.shrink();
+    if (widget.wide) return _wideRow(keys);
     if (widget.compact) return _scrollRow(keys);
     final rows = <Widget>[];
     for (var i = 0; i < keys.length; i += 3) {
@@ -462,6 +476,22 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
         child: Row(
           children: [
             for (final k in keys) SizedBox(width: _keyWidth, child: k),
+          ],
+        ),
+      );
+
+  /// A horizontally-scrollable row of content-sized keys (min [_keyWidth]) so long
+  /// labels show in full instead of being ellipsised (wide mode).
+  Widget _wideRow(List<Widget> keys) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Dimens.s4, vertical: 3),
+        child: Row(
+          children: [
+            for (final k in keys)
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: _keyWidth),
+                child: k,
+              ),
           ],
         ),
       );
