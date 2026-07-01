@@ -55,10 +55,9 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
       peerId: widget.peerId,
       initialMode: mode,
     );
-    // React to real phase *transitions* off the session's phase stream (which
-    // only emits on change) — not the controller's catch-all notifications,
-    // which fire on every cursor move/chrome toggle and would re-flash the
-    // toolbar. Rendering still rebuilds via the ListenableBuilder below.
+    // React to phase *transitions* off the session's phase stream (emits on
+    // change) — not the controller's catch-all notifications, which fire on
+    // every cursor move and would re-flash the toolbar.
     _phaseSub = widget.session.phase.listen(_onPhase);
     // Hide the Android status/navigation bars for an immersive remote view
     // (they swipe back temporarily). Restored on dispose.
@@ -168,9 +167,8 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
       if (_autoPip) widget.core.setAutoPictureInPicture(true);
     } else if (p == SessionPhase.closed && !_c.reconnecting && !_popped) {
       _popped = true;
-      // Use pop(), not maybePop(): the PopScope(canPop: false) below blocks
-      // maybePop() (it re-invokes _close instead), which left the page stuck on
-      // the "Disconnected" spinner forever. pop() leaves the route directly.
+      // pop(), not maybePop(): PopScope(canPop:false) makes maybePop re-invoke
+      // _close, which left the page stuck on the "Disconnected" spinner.
       if (mounted) Navigator.of(context).pop();
     }
   }

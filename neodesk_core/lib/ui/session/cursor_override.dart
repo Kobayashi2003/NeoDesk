@@ -1,13 +1,10 @@
-/// Injection point so the real-engine integration can drive the actual remote
-/// cursor (RustDesk's `CursorModel`) instead of the demo's local virtual cursor.
+/// Injection seam so the real engine can drive the actual remote cursor
+/// (RustDesk's `CursorModel`) instead of the demo's local virtual cursor.
 ///
-/// RustDesk's `CursorModel` owns the cursor: it converts coordinates, tracks the
-/// position, renders the real remote cursor and sends the move to the peer (and,
-/// for relative moves, auto-pans the canvas at the edges). Routing through it is
-/// the only way the on-screen remote cursor actually tracks.
-///
-/// When null, the gesture layer falls back to the FakeCore path: it does its own
-/// screen<->image conversion and moves a local virtual cursor.
+/// `CursorModel` owns the cursor — converting coordinates, rendering the streamed
+/// cursor, sending moves to the peer, edge-panning on relative moves — so routing
+/// through it is the only way the on-screen cursor tracks. When null, the gesture
+/// layer falls back to the FakeCore path (its own conversion + virtual cursor).
 library;
 
 import 'package:flutter/widgets.dart' show Offset;

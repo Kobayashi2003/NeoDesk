@@ -69,9 +69,8 @@ class OverlayChrome extends StatelessWidget {
     );
   }
 
-  // The bar background bleeds under the system bars / cutouts; SafeArea insets
-  // only the content, so it stays correct in portrait *and* landscape (where the
-  // notch and gesture insets move to the sides).
+  // Background bleeds under the system bars / cutouts; SafeArea insets only the
+  // content, so it stays correct in both portrait and landscape.
   Widget _topBar(BuildContext context) => Container(
         decoration: BoxDecoration(color: AppColors.bgBase.withOpacity(0.9)),
         child: SafeArea(
@@ -346,10 +345,8 @@ class OverlayChrome extends StatelessWidget {
         _ => 'Balanced',
       };
 
-  /// Merged quality picker: the three presets plus Custom (which opens the
-  /// image-quality / frame-rate sliders). Replaces the old separate
-  /// "Image quality" + "Custom quality" entries. Pops itself *before* acting so
-  /// the Custom sliders open as a fresh sheet (not popped by this one).
+  /// Quality picker: the three presets plus Custom (opens the quality / fps
+  /// sliders). Pops itself *before* acting so Custom opens as a fresh sheet.
   void _qualityMenu(BuildContext context) {
     const items = {
       ImageQuality.best: 'Best (sharpest)',

@@ -322,10 +322,9 @@ class SessionController extends ChangeNotifier {
     _chromeTimer = Timer(d, () => setChrome(false));
   }
 
-  /// Tracks the viewport size. Centres the cursor on first bind, and re-fits the
-  /// canvas after an orientation flip (portrait↔landscape) so the remote image
-  /// isn't left mis-scaled/off-centre. Safe during build (defers the re-fit to a
-  /// post-frame callback so it never notifies mid-layout).
+  /// Tracks the viewport size: centres the cursor on first bind, and re-fits the
+  /// canvas after an orientation flip (deferred to a post-frame callback so it
+  /// never notifies mid-layout).
   void bindViewport(Size s) {
     if (viewport == s) return;
     final old = viewport;
@@ -396,11 +395,10 @@ class SessionController extends ChangeNotifier {
 
   // --- Canvas pan / zoom -----------------------------------------------------
 
-  /// Combined pan + zoom in a single step: a two-finger gesture does both at
-  /// once, so the canvas follows the fingers like a map/photo viewer (no
-  /// pan-vs-zoom mode switch). Pan is applied first, then zoom about [focal],
-  /// which keeps the image pixel under the focal point anchored while it also
-  /// translates. The real engine clamps itself (§11.2); FakeCore clamps here.
+  /// Combined pan + zoom in one step, so a two-finger gesture moves the canvas
+  /// like a map viewer (no pan/zoom mode switch): pan first, then zoom about
+  /// [focal] (anchors the pixel under it). The engine self-clamps; FakeCore
+  /// clamps here.
   void transformCanvas(
       {Offset pan = Offset.zero, double zoom = 1.0, Offset? focal}) {
     final zooming = zoom != 1.0 && focal != null;
@@ -432,11 +430,9 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Pointer mode: after a zoom, a cursor that was sitting near a viewport edge
-  /// would be carried off-screen (its image position is unchanged but the larger
-  /// scale moves its *screen* position outward). Clamp its screen position back
-  /// inside the viewport so that, once it reaches an edge, further zoom drags it
-  /// along the edge instead of losing it. No-op while it stays well inside.
+  /// Pointer mode: a zoom moves the cursor's *screen* position outward (its image
+  /// position is unchanged), so a cursor near an edge would be carried off-screen.
+  /// Clamp it back inside the viewport so further zoom drags it along the edge.
   void _keepCursorOnScreen() {
     final v = view;
     if (!v.isValid || v.vw <= 0 || v.vh <= 0) return;
@@ -550,11 +546,9 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// One-shot canvas re-fit after a display switch: the new monitor may have a
-  /// different resolution, so the previous display's scale/offset won't frame
-  /// it. We watch the frame stream and fit once the engine publishes the new
-  /// display's geometry (or after a few frames, for a same-resolution monitor
-  /// where only the origin changed).
+  /// One-shot re-fit after a display switch (the new monitor may differ in
+  /// resolution): fit once the engine publishes the new geometry, or after a few
+  /// frames for a same-resolution monitor where only the origin changed.
   StreamSubscription? _switchFitSub;
   void _refitForDisplaySwitch() {
     _switchFitSub?.cancel();

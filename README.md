@@ -44,10 +44,9 @@ flutter build apk --release --target-platform android-arm64
 
 ## What I wrote
 
-The entire redesigned UI and gesture/interaction system (`neodesk_core/`, which
-even runs as a standalone demo with no engine), plus a thin adapter and launcher
-(`rustdesk/lib/neodesk/`) that bind it to RustDesk's engine. Everything else is
-RustDesk's vendored client and prebuilt engine.
+The entire redesigned UI and gesture/interaction system (`neodesk_core/`), plus a
+thin adapter and launcher (`rustdesk/lib/neodesk/`) that bind it to RustDesk's
+engine. Everything else is RustDesk's vendored client and prebuilt engine.
 
 ## Thanks
 

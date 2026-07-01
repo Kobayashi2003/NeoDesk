@@ -32,18 +32,13 @@ final RustdeskCore neodeskCore = RustdeskCore();
 /// a literal inside RustDesk's `main.dart`.
 const String neodeskAppName = 'neodesk';
 
-/// The Spotify-style dark theme used for the whole mobile app, so engine-spawned
-/// Material surfaces (dialogs, toasts, bottom sheets) match the neodesk UI
-/// instead of leaking RustDesk's light/system theme. See main.dart.
+/// App-wide theme (per brightness) for engine-spawned surfaces — dialogs,
+/// toasts, sheets — so they match the neodesk palette instead of RustDesk's.
 ///
-/// It is RustDesk's [MyTheme.darkTheme] re-tinted with the Spotify palette
-/// (green accent + #121212/#282828 surfaces), NOT neodesk's own
-/// `AppTheme.dark()`. This is deliberate: RustDesk dialogs call
-/// `MyTheme.color(context)`, which does a non-null assertion on the
-/// `ColorThemeExtension`/`TabbarTheme` theme-extensions. `copyWith` (with no
-/// `extensions:` arg) keeps those extensions present, so the engine dialogs
-/// stay crash-free while picking up the new accent/surface colours. The
-/// neodesk home itself is additionally wrapped in `AppTheme.dark()` below.
+/// Re-tints RustDesk's [MyTheme] (not neodesk's `AppTheme`) via `copyWith`, which
+/// keeps MyTheme's theme-extensions present: engine dialogs assert on those
+/// (`MyTheme.color`), so dropping them would crash. The neodesk home is
+/// separately wrapped in `AppTheme` — see [NeodeskEntry].
 ThemeData neodeskEngineTheme(Brightness b) {
   final p = paletteFor(b);
   final base = b == Brightness.light ? MyTheme.lightTheme : MyTheme.darkTheme;
@@ -181,13 +176,13 @@ class _RustdeskCanvasControl implements NeodeskCanvasControl {
   }
 }
 
-/// Home widget: neodesk's HomeShell themed with the Spotify-style dark theme.
+/// Home widget: neodesk's HomeShell under the app theme + lock gate. Rebuilds the
+/// whole UI when the Language or Theme setting changes.
 class NeodeskEntry extends StatelessWidget {
   const NeodeskEntry({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild the whole neodesk UI when the Language or Theme setting changes.
     return ValueListenableBuilder<AppLocale>(
       valueListenable: appLocale,
       builder: (context, _, __) => ValueListenableBuilder<Brightness>(

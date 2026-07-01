@@ -49,30 +49,24 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
     _started = true;
     _closed = false;
     _relativeEnabled = false; // re-apply relative-mouse-mode on a reconnect
-    // Dispose any workers left over from a previous session that wasn't closed
-    // cleanly (e.g. a forced disconnect when backgrounded, whose page popped
-    // without calling close()). Otherwise they pile up and the engine session
-    // stays half-open, making the first foreground connect hang.
+    // Dispose workers left over from a session that wasn't closed cleanly (e.g. a
+    // forced background disconnect); otherwise they pile up and the first
+    // foreground connect hangs on the half-open session.
     for (final w in _workers) {
       w.dispose();
     }
     _workers.clear();
     _emit(nd.SessionPhase.connecting);
 
-    // Tear down any prior engine session before starting a fresh one. A forced
-    // disconnect (app backgrounded) can leave the previous session half-open on
-    // the shared gFFI; without this the first foreground connect connects onto
-    // that stale state and spins, while a second attempt (after more churn)
-    // succeeds. Closing first guarantees a clean handshake every time.
+    // Close any prior engine session first: a forced disconnect can leave it
+    // half-open on the shared gFFI, and connecting onto that stale state spins.
     if (wasStarted) {
       await bind.sessionClose(sessionId: gFFI.sessionId);
     }
 
-    // Reset the connection signals to their "connecting" baseline BEFORE start.
-    // ever() only fires on a *change*, so a stale pi.isSet=true left over from a
-    // previous session (same global gFFI) would mean the worker never fires and
-    // we'd stay stuck on "connecting" forever — until a full exit+reconnect.
-    // Forcing false here guarantees the handshake produces a false→true edge.
+    // Reset the signals to their "connecting" baseline first: ever() only fires
+    // on change, so a stale pi.isSet=true from a prior session would leave us
+    // stuck on "connecting". Forcing false guarantees a false→true edge.
     _m.pi.isSet.value = false;
     _m.waitForFirstImage.value = true;
 
@@ -132,11 +126,9 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
 
   @override
   Future<void> switchDisplay(int index) async {
-    // Switch the streamed display AND update the LOCAL display metadata
-    // (pi.currentDisplay, display rect, cursor origin, canvas view-style,
-    // resolution). A bare bind.sessionSwitchDisplay only does the former, so the
-    // image switched while the cursor range / resolution stayed on the old
-    // display. openMonitorInTheSameTab is stock RustDesk's combined helper.
+    // openMonitorInTheSameTab (stock RustDesk) switches the display AND updates
+    // local metadata (currentDisplay, rect, cursor origin, view style,
+    // resolution) — a bare sessionSwitchDisplay leaves those on the old display.
     openMonitorInTheSameTab(index, gFFI, gFFI.ffiModel.pi);
   }
 
