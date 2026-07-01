@@ -421,18 +421,23 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     ];
     final fns = [for (var i = 1; i <= 12; i++) _vk('F$i', 'VK_F$i')];
 
+    // Compact controls row *grouping* (two merged scrollable rows); wide only
+    // controls how each key is *sized* within a row (content-fit vs fixed). The
+    // two settings are independent and compose, so compact is honoured even when
+    // wide is on.
+    if (widget.compact) {
+      final row = widget.wide ? _wideRow : _scrollRow;
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        row([...mods, ...edit, ...nav]),
+        row(fns),
+      ]);
+    }
     if (widget.wide) {
       return Column(mainAxisSize: MainAxisSize.min, children: [
         _wideRow(mods),
         _wideRow(edit),
         _wideRow(nav),
         _wideRow(fns),
-      ]);
-    }
-    if (widget.compact) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        _scrollRow([...mods, ...edit, ...nav]),
-        _scrollRow(fns),
       ]);
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
