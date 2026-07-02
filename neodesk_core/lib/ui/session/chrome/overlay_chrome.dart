@@ -460,10 +460,17 @@ class OverlayChrome extends StatelessWidget {
     );
   }
 
+  // RustDesk's custom-quality/fps defaults.
+  static const _defaultCustomQuality = 50;
+  static const _defaultCustomFps = 30;
+
   Future<void> _customQuality(BuildContext context) async {
     var q = (await controller.getCustomQuality()).toDouble().clamp(10.0, 100.0);
     var fps = (await controller.getCustomFps()).toDouble().clamp(5.0, 120.0);
     if (!context.mounted) return;
+    // Selecting "Custom" switches to the custom preset right away (using the
+    // current custom values) — no need to nudge a slider first.
+    controller.setImageQuality(ImageQuality.custom);
     showAppSheet(
       context,
       (ctx) => StatefulBuilder(
@@ -473,7 +480,26 @@ class OverlayChrome extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr('Custom quality'), style: AppTypography.title),
+                Row(
+                  children: [
+                    Expanded(
+                        child: Text(tr('Custom quality'),
+                            style: AppTypography.title)),
+                    TextButton(
+                      onPressed: () {
+                        setSt(() {
+                          q = _defaultCustomQuality.toDouble();
+                          fps = _defaultCustomFps.toDouble();
+                        });
+                        controller.setCustomQuality(_defaultCustomQuality);
+                        controller.setCustomFps(_defaultCustomFps);
+                      },
+                      child: Text(tr('Reset'),
+                          style: AppTypography.button
+                              .copyWith(color: AppColors.accent)),
+                    ),
+                  ],
+                ),
                 _sliderRow('Image quality', '${q.round()}%', q, 10, 100,
                     (v) => setSt(() => q = v),
                     (v) => controller.setCustomQuality(v.round())),
