@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:neodesk_core/neodesk_core.dart';
 
 import '../session/gestures/gesture_settings_page.dart';
+import '../session/gestures/gesture_tuning_page.dart';
 import '../session/gestures/interaction_ui_mode.dart';
 import '../session/keyboard/combo_settings_page.dart';
 import '../theme/app_colors.dart';
@@ -353,6 +354,11 @@ class _SettingsPageState extends State<SettingsPage> {
             _row(Icons.gesture, 'Customize gestures', onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => GestureSettingsPage(config: _cfg),
+              ));
+            }),
+            _row(Icons.tune, 'Gesture sensitivity', onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => GestureTuningPage(config: _cfg),
               ));
             }),
             _switchRow(

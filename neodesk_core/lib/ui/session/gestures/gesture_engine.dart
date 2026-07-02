@@ -1,0 +1,290 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
+
+import 'gesture_classify.dart';
+import 'gesture_map.dart';
+import 'gesture_tuning.dart';
+
+/// Where a recognised gesture goes. The engine only *detects* gestures (which
+/// [GestureSlot] fired, plus the geometry); the sink decides what to *do* — in a
+/// real session that's cursor/click/scroll via the controller (mode-aware), in
+/// the settings test area it's just a readout. This split lets both reuse the
+/// exact same recognition logic. See DESIGN.md §4.2.
+abstract class GestureSink {
+  /// The first finger of a gesture touched down.
+  void gestureStart() {}
+
+  /// A discrete tap of [slot] (one/two/three/fourFingerTap) at screen point [at].
+  void tap(GestureSlot slot, Offset at);
+
+  /// The one-finger long-press [slot] fired at [at]. Return true if it began a
+  /// *held* button — then moves come via [holdDrag] and the lift via [holdEnd].
+  bool longPress(GestureSlot slot, Offset at);
+
+  /// While a long-press hold is active, the finger moved to [absPos] (by [delta]).
+  void holdDrag(Offset absPos, Offset delta) {}
+
+  /// The held button is released.
+  void holdEnd() {}
+
+  /// A continuous (per-frame) drag/pinch of [slot] — geometry for whichever fits.
+  void continuous(GestureSlot slot,
+      {Offset delta = Offset.zero,
+      Offset absPos = Offset.zero,
+      double zoom = 1.0,
+      Offset focal = Offset.zero});
+
+  /// The whole gesture ended (all fingers up / cancelled) — reset transient state.
+  void gestureEnd() {}
+}
+
+/// Raw-pointer gesture state machine, shared by Touch and Pointer modes (the mode
+/// difference — absolute vs relative cursor, edge-pan — lives entirely in the
+/// [GestureSink], so this recognition logic is written once). Fed pointer events
+/// by a [Listener]; emits decisions to [sink]. See DESIGN.md §4.2.
+///
+/// Timeline: down (count fingers, arm long-press) → move (past slop ⇒ drag; by
+/// finger count ⇒ 1-finger cursor / 2-finger classify+apply / 3+ track-only) →
+/// long-press timer (hold) → up (fire the tap if it was clean).
+class GestureEngine {
+  GestureEngine({required this.tuning, required this.sink});
+
+  /// Live tuning — the settings test area swaps this as sliders move.
+  GestureTuning tuning;
+  final GestureSink sink;
+
+  final Map<int, _Finger> _fingers = {};
+  int _maxFingers = 0;
+  DateTime _downAt = DateTime.now();
+  bool _moved = false;
+  bool _lpFired = false;
+  bool _holding = false;
+  bool _consumed = false; // a tap already fired (early-tap guards re-fire)
+  Timer? _lpTimer;
+
+  // Two-finger state.
+  TwoFingerKind _twoKind = TwoFingerKind.undecided;
+  DateTime _twoAt = DateTime.now();
+  double _startDist = 0, _lastDist = 0;
+  Offset _startA = Offset.zero, _startB = Offset.zero;
+  Offset _startMid = Offset.zero, _lastMid = Offset.zero;
+  Offset _lastCentroid = Offset.zero;
+  double _travel = 0, _maxZoomDev = 0;
+
+  int get fingerCount => _fingers.length;
+
+  // ---- pointer events -------------------------------------------------------
+
+  void down(int id, Offset pos) {
+    _fingers[id] = _Finger(pos);
+    if (_fingers.length > _maxFingers) _maxFingers = _fingers.length;
+
+    if (_fingers.length == 1) {
+      _moved = false;
+      _lpFired = false;
+      _consumed = false;
+      _downAt = DateTime.now();
+      _travel = 0;
+      _maxZoomDev = 0;
+      _lpTimer = Timer(tuning.longPress, _onLongPress);
+      sink.gestureStart();
+    } else {
+      _lpTimer?.cancel();
+      if (_holding) {
+        sink.holdEnd(); // a held long-press escalated to multi-finger
+        _holding = false;
+      }
+      _twoKind = TwoFingerKind.undecided;
+      if (_fingers.length == 2) _baselineTwo();
+    }
+    _lastCentroid = _centroid();
+  }
+
+  void move(int id, Offset pos, Offset delta) {
+    final f = _fingers[id];
+    if (f == null) return;
+    f.pos = pos;
+
+    if (!_moved && (pos - f.down).distance > tuning.dragSlop) {
+      _moved = true;
+      _lpTimer?.cancel();
+    }
+
+    switch (_fingers.length) {
+      case 1:
+        if (_holding) {
+          sink.holdDrag(pos, delta);
+        } else if (_lpFired) {
+          return; // long-press did a discrete action; ignore the rest
+        } else if (_moved) {
+          sink.continuous(GestureSlot.oneFingerDrag, delta: delta, absPos: pos);
+        }
+      case 2:
+        _handleTwoFinger();
+      default:
+        // 3+ fingers are tap-only: track centroid travel to reject a drag.
+        final c = _centroid();
+        _travel += (c - _lastCentroid).distance;
+        _lastCentroid = c;
+    }
+  }
+
+  void up(int id) => _end(id, clickable: true);
+  void cancel(int id) => _end(id, clickable: false);
+
+  void dispose() => _lpTimer?.cancel();
+
+  // ---- internals ------------------------------------------------------------
+
+  void _onLongPress() {
+    if (_fingers.length != 1 || _moved || _holding) return;
+    _lpFired = true;
+    final pos = _fingers.values.first.pos;
+    if (sink.longPress(GestureSlot.oneFingerLongPress, pos)) _holding = true;
+  }
+
+  void _handleTwoFinger() {
+    final (a, b) = _twoPositions();
+    final dist = (a - b).distance;
+    final mid = (a + b) / 2;
+
+    // Settle window: track but apply nothing yet, so a 3rd/4th finger landing a
+    // beat later isn't pre-empted by a transient two-finger zoom.
+    if (DateTime.now().difference(_twoAt) < tuning.settle) {
+      _lastDist = dist;
+      _lastMid = mid;
+      _lastCentroid = mid;
+      return;
+    }
+
+    if (_twoKind == TwoFingerKind.undecided) {
+      _twoKind = classifyTwoFinger(
+        startA: _startA,
+        startB: _startB,
+        a: a,
+        b: b,
+        startDist: _startDist,
+        startCentroid: _startMid,
+        zoomActivate: tuning.zoomActivate,
+        dragSlop: tuning.dragSlop,
+      );
+    }
+
+    final dMid = mid - _lastMid;
+    _travel += dMid.distance;
+    switch (_twoKind) {
+      case TwoFingerKind.pinch:
+        final dev = _startDist == 0 ? 0.0 : (dist / _startDist - 1).abs();
+        if (dev > _maxZoomDev) _maxZoomDev = dev;
+        sink.continuous(GestureSlot.twoFingerPinch,
+            zoom: _lastDist == 0 ? 1.0 : dist / _lastDist, focal: mid);
+      case TwoFingerKind.pan:
+        sink.continuous(GestureSlot.twoFingerDragH, delta: dMid);
+      case TwoFingerKind.scroll:
+        sink.continuous(GestureSlot.twoFingerDragV, delta: dMid);
+      case TwoFingerKind.undecided:
+        break;
+    }
+    _lastDist = dist;
+    _lastMid = mid;
+    _lastCentroid = mid;
+  }
+
+  void _end(int id, {required bool clickable}) {
+    final ended = _fingers[id];
+    final wasHold = _holding;
+    final wasLp = _lpFired;
+    _fingers.remove(id);
+    _lpTimer?.cancel();
+    if (_holding) {
+      sink.holdEnd();
+      _holding = false;
+    }
+
+    final allUp = _fingers.isEmpty;
+    // Fire the tap when every finger is up, or — if early-tap is on — the moment
+    // the first finger lifts (the gesture is already decided by then).
+    if (clickable &&
+        !_consumed &&
+        !_moved &&
+        !wasHold &&
+        !wasLp &&
+        (tuning.earlyTap || allUp)) {
+      if (_fireTap(ended)) _consumed = true;
+    }
+
+    if (!allUp) {
+      _lastCentroid = _centroid();
+      if (_fingers.length == 2) _baselineTwo(); // re-baseline on 3→2
+      return;
+    }
+    sink.gestureEnd();
+    _reset();
+  }
+
+  /// Emit the tap for the peak finger count. One-finger taps always fire; multi-
+  /// finger taps must be "clean" (little travel/zoom, quick, never classified as a
+  /// drag). Returns whether a tap was emitted.
+  bool _fireTap(_Finger? ended) {
+    final at = ended?.pos ?? ended?.down ?? Offset.zero;
+    if (_maxFingers == 1) {
+      sink.tap(GestureSlot.oneFingerTap, at);
+      return true;
+    }
+    final clean = _travel < tuning.tapSlop &&
+        _maxZoomDev < 0.08 &&
+        DateTime.now().difference(_downAt) < tuning.multiTap &&
+        _twoKind == TwoFingerKind.undecided;
+    if (!clean) return false;
+    if (_maxFingers == 2) {
+      sink.tap(GestureSlot.twoFingerTap, at);
+    } else if (_maxFingers == 3) {
+      sink.tap(GestureSlot.threeFingerTap, at);
+    } else {
+      sink.tap(GestureSlot.fourFingerTap, at);
+    }
+    return true;
+  }
+
+  void _baselineTwo() {
+    _twoAt = DateTime.now();
+    final (a, b) = _twoPositions();
+    _startDist = _lastDist = (a - b).distance;
+    _startA = a;
+    _startB = b;
+    _startMid = _lastMid = (a + b) / 2;
+    _lastCentroid = _startMid;
+    _twoKind = TwoFingerKind.undecided;
+  }
+
+  void _reset() {
+    _maxFingers = 0;
+    _moved = false;
+    _lpFired = false;
+    _consumed = false;
+    _twoKind = TwoFingerKind.undecided;
+    _travel = 0;
+    _maxZoomDev = 0;
+  }
+
+  Offset _centroid() {
+    if (_fingers.isEmpty) return Offset.zero;
+    var sum = Offset.zero;
+    for (final f in _fingers.values) {
+      sum += f.pos;
+    }
+    return sum / _fingers.length.toDouble();
+  }
+
+  (Offset, Offset) _twoPositions() {
+    final l = _fingers.values.toList();
+    return (l[0].pos, l[1].pos);
+  }
+}
+
+class _Finger {
+  _Finger(this.down) : pos = down;
+  final Offset down;
+  Offset pos;
+}

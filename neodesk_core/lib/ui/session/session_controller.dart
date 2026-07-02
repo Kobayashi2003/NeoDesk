@@ -8,6 +8,7 @@ import 'canvas_override.dart';
 import 'canvas_view.dart';
 import 'cursor_override.dart';
 import 'gestures/gesture_map.dart';
+import 'gestures/gesture_tuning.dart';
 import 'gestures/interaction_ui_mode.dart';
 
 /// Per-session view state. Bridges a [RemoteSession] (+ its frame/input ports)
@@ -28,6 +29,7 @@ class SessionController extends ChangeNotifier {
     input = core.inputSinkOf(session);
     mode = initialMode;
     gestureMap = GestureMap.fromJson(core.config.get(GestureMap.storageKey));
+    gestureTuning = GestureTuningStore.load(core.config);
     scrollInvert = core.config.getBool(ConfigKeys.scrollInvert);
     hideCursorInTouch =
         core.config.getBool(ConfigKeys.hideCursorInTouch, defaultValue: true);
@@ -106,6 +108,10 @@ class SessionController extends ChangeNotifier {
 
   /// Customisable gesture bindings (DESIGN.md §2.1 / §3.4).
   late GestureMap gestureMap;
+
+  /// Recognition thresholds for the gesture state machine (long-press time,
+  /// slops, early-tap…). Read once at session start; edited in Settings.
+  late GestureTuning gestureTuning;
 
   /// Settings mirrored from [ConfigStore].
   bool scrollInvert = false;

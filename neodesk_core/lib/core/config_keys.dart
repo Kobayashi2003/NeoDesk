@@ -36,6 +36,9 @@ abstract final class ConfigKeys {
   /// Persisted [GestureMap] JSON.
   static const gestureMap = 'neodesk.gesturemap';
 
+  /// Persisted gesture-recognition tuning (long-press time, slops, early-tap…) JSON.
+  static const gestureTuning = 'neodesk.gesturetuning';
+
   /// Persisted user-editable shortcut combos (JSON list).
   static const combos = 'neodesk.combos';
 
