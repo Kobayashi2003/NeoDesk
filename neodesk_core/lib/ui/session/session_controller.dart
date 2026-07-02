@@ -649,6 +649,7 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<int> getCustomQuality() => session.getCustomQuality();
+  Future<int> getCustomFps() => session.getCustomFps();
 
   /// Apply a custom image quality (%) and switch the preset to `custom`.
   void setCustomQuality(int q) {
@@ -656,7 +657,13 @@ class SessionController extends ChangeNotifier {
     setImageQuality(ImageQuality.custom);
   }
 
-  void setCustomFps(int fps) => session.setCustomFps(fps);
+  /// Apply a custom frame-rate cap and switch the preset to `custom` — a named
+  /// preset ignores custom-fps, so without this the change wouldn't take effect
+  /// and the menu would fall back to the previous preset.
+  void setCustomFps(int fps) {
+    session.setCustomFps(fps);
+    setImageQuality(ImageQuality.custom);
+  }
 
   void toggleClipboard() {
     clipboardEnabled = !clipboardEnabled;

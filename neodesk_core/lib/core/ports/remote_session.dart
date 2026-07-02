@@ -77,6 +77,7 @@ abstract interface class RemoteSession {
   Future<void> setCustomQuality(int quality);
 
   /// Custom frame-rate cap (5–120) for the `custom` quality preset.
+  Future<int> getCustomFps();
   Future<void> setCustomFps(int fps);
 
   /// Live connection stats (FPS / bitrate / delay / codec). Only updates while

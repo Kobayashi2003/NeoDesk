@@ -226,6 +226,13 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
       sessionId: gFFI.sessionId, value: quality);
 
   @override
+  Future<int> getCustomFps() async {
+    final o =
+        await bind.sessionGetOption(sessionId: gFFI.sessionId, arg: 'custom-fps');
+    return int.tryParse(o ?? '') ?? 30;
+  }
+
+  @override
   Future<void> setCustomFps(int fps) =>
       bind.sessionSetCustomFps(sessionId: gFFI.sessionId, fps: fps);
 

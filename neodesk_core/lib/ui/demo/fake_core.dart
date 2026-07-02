@@ -309,7 +309,10 @@ class FakeRemoteSession implements RemoteSession {
   @override
   Future<void> setCustomQuality(int quality) async => _customQuality = quality;
   @override
-  Future<void> setCustomFps(int fps) async {}
+  Future<int> getCustomFps() async => _customFps;
+  int _customFps = 30;
+  @override
+  Future<void> setCustomFps(int fps) async => _customFps = fps;
   @override
   Stream<QualityStats> get qualityStats => Stream.periodic(
         const Duration(seconds: 1),

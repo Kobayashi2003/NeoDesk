@@ -462,7 +462,7 @@ class OverlayChrome extends StatelessWidget {
 
   Future<void> _customQuality(BuildContext context) async {
     var q = (await controller.getCustomQuality()).toDouble().clamp(10.0, 100.0);
-    var fps = 30.0;
+    var fps = (await controller.getCustomFps()).toDouble().clamp(5.0, 120.0);
     if (!context.mounted) return;
     showAppSheet(
       context,
