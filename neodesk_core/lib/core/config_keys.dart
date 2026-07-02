@@ -90,4 +90,9 @@ abstract final class ConfigKeys {
   /// Ask for confirmation before disconnecting an active session (bool, default
   /// on). Off = leaving/back/Disconnect closes the session immediately.
   static const confirmDisconnect = 'neodesk.confirmdisconnect';
+
+  /// Show the remote (controlled) cursor and follow it as the remote user moves
+  /// their physical mouse (drives the engine's `show-remote-cursor`; bool,
+  /// default on).
+  static const followRemoteCursor = 'neodesk.followcursor';
 }

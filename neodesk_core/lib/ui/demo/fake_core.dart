@@ -278,6 +278,12 @@ class FakeRemoteSession implements RemoteSession {
   Future<void> setToggleOption(String key, bool on) async =>
       _toggles[key] = on;
 
+  @override
+  Future<void> setBlockInput(bool block) async {}
+
+  @override
+  Future<bool> hasPermission(String name) async => false;
+
   String _codec = 'auto';
   @override
   Future<({String current, List<String> available})> codecInfo() async =>

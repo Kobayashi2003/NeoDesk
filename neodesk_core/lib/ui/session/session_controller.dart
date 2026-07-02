@@ -597,6 +597,9 @@ class SessionController extends ChangeNotifier {
   bool audioEnabled = true;
   bool viewOnly = false; // input disabled (watch only)
   bool qualityMonitorOn = false; // FPS/bitrate overlay
+  bool followRemoteCursor = true; // show + follow the remote's own cursor
+  bool blockInput = false; // block the remote PC's own keyboard & mouse
+  bool canBlockInput = false; // peer granted the block_input permission
 
   /// Latest connection stats (only meaningful while [qualityMonitorOn]).
   QualityStats? quality;
@@ -609,6 +612,27 @@ class SessionController extends ChangeNotifier {
     audioEnabled = !await session.getToggleOption('disable-audio');
     viewOnly = await session.getToggleOption('view-only');
     qualityMonitorOn = await session.getToggleOption('show-quality-monitor');
+    // Apply the follow-remote-cursor preference (so the phone's pointer tracks
+    // the remote user's physical mouse). Block-input starts off and needs the
+    // peer's permission.
+    followRemoteCursor =
+        core.config.getBool(ConfigKeys.followRemoteCursor, defaultValue: true);
+    await session.setToggleOption('show-remote-cursor', followRemoteCursor);
+    canBlockInput = await session.hasPermission('block_input');
+    blockInput = false;
+    notifyListeners();
+  }
+
+  void toggleFollowRemoteCursor() {
+    followRemoteCursor = !followRemoteCursor;
+    core.config.setBool(ConfigKeys.followRemoteCursor, followRemoteCursor);
+    session.setToggleOption('show-remote-cursor', followRemoteCursor);
+    notifyListeners();
+  }
+
+  void toggleBlockInput() {
+    blockInput = !blockInput;
+    session.setBlockInput(blockInput);
     notifyListeners();
   }
 

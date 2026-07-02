@@ -157,6 +157,14 @@ class _RustdeskRemoteSession implements nd.RemoteSession {
   }
 
   @override
+  Future<void> setBlockInput(bool block) => bind.sessionToggleOption(
+      sessionId: gFFI.sessionId, value: block ? 'block-input' : 'unblock-input');
+
+  @override
+  Future<bool> hasPermission(String name) async =>
+      gFFI.ffiModel.permissions[name] != false;
+
+  @override
   Future<({String current, List<String> available})> codecInfo() async {
     final current = (await bind.sessionGetOption(
             sessionId: gFFI.sessionId, arg: kOptionCodecPreference)) ??

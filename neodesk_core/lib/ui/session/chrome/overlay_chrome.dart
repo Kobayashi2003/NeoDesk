@@ -249,6 +249,12 @@ class OverlayChrome extends StatelessWidget {
                   controller.toggleAudio),
               _toggleTile(ctx, 'View only (no input)', controller.viewOnly,
                   controller.toggleViewOnly),
+              _toggleTile(ctx, 'Follow remote cursor',
+                  controller.followRemoteCursor,
+                  controller.toggleFollowRemoteCursor),
+              if (controller.canBlockInput)
+                _toggleTile(ctx, 'Block remote input', controller.blockInput,
+                    controller.toggleBlockInput),
               _toggleTile(ctx, 'Quality monitor', controller.qualityMonitorOn,
                   controller.toggleQualityMonitor),
               _toggleTile(ctx, 'Scroll strip', controller.scrollStripVisible,

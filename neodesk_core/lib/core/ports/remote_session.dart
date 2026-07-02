@@ -48,6 +48,15 @@ abstract interface class RemoteSession {
   /// Set a boolean session toggle-option to [on] (toggles iff it differs).
   Future<void> setToggleOption(String key, bool on);
 
+  /// Block/unblock the remote PC's own keyboard & mouse for this session (the
+  /// peer must have granted the `block_input` permission). Wraps the engine's
+  /// `block-input` / `unblock-input` toggle.
+  Future<void> setBlockInput(bool block);
+
+  /// Whether the peer granted permission [name] (e.g. `block_input`). Reads
+  /// `FfiModel.permissions`; false off the real engine / in demo.
+  Future<bool> hasPermission(String name);
+
   /// Video codec preference: the [current] choice and the [available] options
   /// (`auto` / `vp8` / `vp9` / `av1` / `h264` / `h265`, filtered to what the peer
   /// supports). Wraps `bind.sessionAlternativeCodecs` / `sessionGetOption`.
