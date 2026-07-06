@@ -28,7 +28,10 @@ class OverlayChrome extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        final visible = controller.chromeVisible;
+        // Always collapse the toolbar in picture-in-picture — the small window
+        // should show only the remote frame. Chrome restores (per chromeVisible)
+        // once PiP ends.
+        final visible = controller.chromeVisible && !controller.pipActive;
         const dur = Duration(milliseconds: 200);
         return IgnorePointer(
           ignoring: !visible,
