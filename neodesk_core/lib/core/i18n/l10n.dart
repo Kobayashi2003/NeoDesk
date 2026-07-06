@@ -71,7 +71,10 @@ const Map<String, String> _zh = {
   'Rename device': '重命名设备',
   'Cancel': '取消',
   'Save': '保存',
-  // Settings sections
+  // Settings categories (大类) + sections
+  'Control': '操作',
+  'Interface': '界面',
+  'Other': '其他',
   'Interaction': '交互',
   'Pointer & scrolling': '指针与滚动',
   'Keyboard & keys': '键盘与按键',
@@ -293,8 +296,11 @@ const Map<String, String> _ja = {
   'Rename device': 'デバイス名を変更',
   'Cancel': 'キャンセル',
   'Save': '保存',
-  // Settings sections
-  'Interaction': '操作',
+  // Settings categories (大类) + sections
+  'Control': '操作',
+  'Interface': 'インターフェース',
+  'Other': 'その他',
+  'Interaction': 'インタラクション',
   'Pointer & scrolling': 'ポインターとスクロール',
   'Keyboard & keys': 'キーボードとキー',
   'General': '一般',

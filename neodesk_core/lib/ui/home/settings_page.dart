@@ -346,9 +346,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
             child: Text(tr('Settings'), style: AppTypography.display),
           ),
-          // Grouped by what you're adjusting: how you interact, the pointer &
-          // scrolling feel, the keyboard/keys surfaces, then app-level.
-          _section('Interaction', [
+          // Two-level grouping: three big categories — Control (how you drive
+          // the remote), Interface (how the app looks/reads), and Other (app-
+          // level). Control is subdivided into Interaction, Pointer & scrolling,
+          // and Keyboard. See DESIGN.md §4.3.
+          _category('Control'),
+          _subsection('Interaction', [
             _row(Icons.touch_app, 'Default mode',
                 value: _mode.label, onTap: _pickMode),
             _row(Icons.gesture, 'Customize gestures', onTap: () {
@@ -368,7 +371,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _cfg.setBool(ConfigKeys.hideCursorInTouch, v);
             }),
           ]),
-          _section('Pointer & scrolling', [
+          _subsection('Pointer & scrolling', [
             _sliderRow(
                 Icons.speed,
                 'Pointer speed',
@@ -401,7 +404,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _cfg.setBool(ConfigKeys.scrollInvert, v);
             }),
           ]),
-          _section('Keyboard & keys', [
+          _subsection('Keyboard & keys', [
             _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => ComboSettingsPage(config: _cfg),
@@ -443,7 +446,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     ConfigKeys.volumeDown, _volumeDown,
                     (v) => setState(() => _volumeDown = v))),
           ]),
-          _section('General', [
+          // Interface — how the app looks / reads (theme, language, on-screen
+          // overlays). Quality monitor lives here: it's a display overlay.
+          _category('Interface'),
+          _card([
             _row(Icons.palette_outlined, 'Theme',
                 value: _labelOf(_themes, _theme),
                 onTap: () => _pickOption('Theme', _themes,
@@ -467,6 +473,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     ConfigKeys.qualityMonitorDetail,
                     _qualityDetail,
                     (v) => setState(() => _qualityDetail = v))),
+          ]),
+          // Other — app-level behaviour and About.
+          _category('Other'),
+          _card([
             _switchRow(Icons.picture_in_picture_alt_outlined,
                 'Auto small window in background', _autoPip, (v) {
               setState(() => _autoPip = v);
@@ -498,7 +508,7 @@ class _SettingsPageState extends State<SettingsPage> {
               widget.core.setAppLockSecure(v); // FLAG_SECURE follows the setting
             }),
           ]),
-          _section('About', [
+          _subsection('About', [
             _row(Icons.info_outline, 'Version', value: _version),
             _row(Icons.system_update, 'Check for updates', onTap: _checkUpdate),
           ]),
@@ -508,42 +518,66 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// A titled group whose rows are wrapped in a single rounded card with hairline
-  /// separators — the modern grouped-settings look.
-  Widget _section(String title, List<Widget> rows) => Padding(
+  /// A big top-level category header (大类, e.g. Control / Interface / Other).
+  /// Sits a rung above [_subsection]'s accent subheaders: larger, primary-text,
+  /// mixed-case. The card(s) beneath it are emitted separately.
+  Widget _category(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            Dimens.pageInset + Dimens.s4, Dimens.s24, Dimens.pageInset, 0),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(tr(title), style: AppTypography.title),
+        ),
+      );
+
+  /// A labelled subsection: an accent uppercase subheader over a single [_card].
+  Widget _subsection(String title, List<Widget> rows) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.pageInset),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  Dimens.s4, Dimens.s24, 0, Dimens.s8),
+                  Dimens.s4, Dimens.s16, 0, Dimens.s8),
               child: Text(tr(title).toUpperCase(),
                   style: AppTypography.caption.copyWith(
                       color: AppColors.accent,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8)),
             ),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.bgElevated1,
-                borderRadius: BorderRadius.circular(Dimens.rCard),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < rows.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                          height: 1,
-                          thickness: 1,
-                          indent: 56,
-                          color: AppColors.divider),
-                    rows[i],
-                  ],
-                ],
-              ),
-            ),
+            _cardBody(rows),
+          ],
+        ),
+      );
+
+  /// A card of rows with no subheader — for a category that needs only one
+  /// group (Interface, Other's app-level toggles). Adds the top gap that a
+  /// [_subsection]'s subheader would otherwise provide.
+  Widget _card(List<Widget> rows) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            Dimens.pageInset, Dimens.s12, Dimens.pageInset, 0),
+        child: _cardBody(rows),
+      );
+
+  /// The rounded container of [rows] with hairline separators — the modern
+  /// grouped-settings look.
+  Widget _cardBody(List<Widget> rows) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated1,
+          borderRadius: BorderRadius.circular(Dimens.rCard),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0)
+                Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 56,
+                    color: AppColors.divider),
+              rows[i],
+            ],
           ],
         ),
       );
