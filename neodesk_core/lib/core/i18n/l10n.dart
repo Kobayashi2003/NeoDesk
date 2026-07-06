@@ -78,6 +78,7 @@ const Map<String, String> _zh = {
   'Interaction': '交互',
   'Pointer & scrolling': '指针与滚动',
   'Keyboard & keys': '键盘与按键',
+  'On-screen keyboard': '屏幕键盘',
   'General': '通用',
   'About': '关于',
   // Settings rows
@@ -303,6 +304,7 @@ const Map<String, String> _ja = {
   'Interaction': 'インタラクション',
   'Pointer & scrolling': 'ポインターとスクロール',
   'Keyboard & keys': 'キーボードとキー',
+  'On-screen keyboard': 'スクリーンキーボード',
   'General': '一般',
   'About': '情報',
   // Settings rows

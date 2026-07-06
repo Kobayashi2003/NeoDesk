@@ -404,36 +404,14 @@ class _SettingsPageState extends State<SettingsPage> {
               _cfg.setBool(ConfigKeys.scrollInvert, v);
             }),
           ]),
+          // Keys here map input sent to the remote (Fn shortcuts, hardware
+          // volume-key actions); how the on-screen keyboard *looks* lives under
+          // Interface instead.
           _subsection('Keyboard & keys', [
             _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => ComboSettingsPage(config: _cfg),
               ));
-            }),
-            _row(Icons.format_size, 'Key size',
-                value: _labelOf(_keySizes, _keySize),
-                onTap: () => _pickOption('Key size', _keySizes,
-                    ConfigKeys.keySize, _keySize,
-                    (v) => setState(() => _keySize = v))),
-            _sliderRow(
-                Icons.opacity,
-                'Panel opacity',
-                '${(_panelOpacity * 100).round()}%',
-                _panelOpacity,
-                _opacityMin,
-                _opacityMax,
-                (v) => setState(() => _panelOpacity = v),
-                () => _cfg.set(ConfigKeys.panelOpacity,
-                    _panelOpacity.toStringAsFixed(2))),
-            _switchRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
-                _keyCompact, (v) {
-              setState(() => _keyCompact = v);
-              _cfg.setBool(ConfigKeys.keyCompact, v);
-            }),
-            _switchRow(Icons.width_normal, 'Wide keys (show full labels)',
-                _keyWide, (v) {
-              setState(() => _keyWide = v);
-              _cfg.setBool(ConfigKeys.keyWide, v);
             }),
             _row(Icons.volume_up_outlined, 'Volume Up key',
                 value: _labelOf(_volumeActions, _volumeUp),
@@ -446,8 +424,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     ConfigKeys.volumeDown, _volumeDown,
                     (v) => setState(() => _volumeDown = v))),
           ]),
-          // Interface — how the app looks / reads (theme, language, on-screen
-          // overlays). Quality monitor lives here: it's a display overlay.
+          // Interface — how the app looks / reads. General display first, then
+          // the on-screen keyboard's appearance (size / opacity / labels).
           _category('Interface'),
           _card([
             _row(Icons.palette_outlined, 'Theme',
@@ -473,6 +451,33 @@ class _SettingsPageState extends State<SettingsPage> {
                     ConfigKeys.qualityMonitorDetail,
                     _qualityDetail,
                     (v) => setState(() => _qualityDetail = v))),
+          ]),
+          _subsection('On-screen keyboard', [
+            _row(Icons.format_size, 'Key size',
+                value: _labelOf(_keySizes, _keySize),
+                onTap: () => _pickOption('Key size', _keySizes,
+                    ConfigKeys.keySize, _keySize,
+                    (v) => setState(() => _keySize = v))),
+            _sliderRow(
+                Icons.opacity,
+                'Panel opacity',
+                '${(_panelOpacity * 100).round()}%',
+                _panelOpacity,
+                _opacityMin,
+                _opacityMax,
+                (v) => setState(() => _panelOpacity = v),
+                () => _cfg.set(ConfigKeys.panelOpacity,
+                    _panelOpacity.toStringAsFixed(2))),
+            _switchRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
+                _keyCompact, (v) {
+              setState(() => _keyCompact = v);
+              _cfg.setBool(ConfigKeys.keyCompact, v);
+            }),
+            _switchRow(Icons.width_normal, 'Wide keys (show full labels)',
+                _keyWide, (v) {
+              setState(() => _keyWide = v);
+              _cfg.setBool(ConfigKeys.keyWide, v);
+            }),
           ]),
           // Other — app-level behaviour and About.
           _category('Other'),
