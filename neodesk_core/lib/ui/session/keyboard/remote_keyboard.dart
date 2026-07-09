@@ -214,77 +214,66 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
     'meta': 'Meta',
   };
 
-  void _tapHold() => setState(() => _holdArmed = !_holdArmed);
-
-  /// Tap of a `VK_*` key, routed through the Hold state machine.
-  void _tapVk(String vk) => _tapKey(vk, vk);
-
-  /// Shared hold/press logic for non-modifier keys. [token] is the held-set key;
-  /// [vk] the engine key.
-  void _tapKey(String token, String vk) {
-    if (_holdArmed) {
-      widget.input.key(vk, down: true, press: false); // sustained keydown
-      setState(() {
-        _held.add(token);
-        _holdArmed = false;
-      });
-      _applyHeldMods(); // keep the meta flag set while Win is held (see below)
-    } else if (_held.contains(token)) {
-      widget.input.key(vk, down: false, press: false); // re-tap releases (keyup)
-      setState(() => _held.remove(token));
-      _applyHeldMods();
-    } else {
-      widget.input.key(vk, press: true); // momentary tap (held modifiers apply)
-    }
-  }
-
   /// Held mouse buttons live in [_held] alongside the keys, under this prefix.
   static const _mousePrefix = 'mouse:';
 
   static MouseButton _mouseButtonOf(String token) =>
       MouseButton.values.byName(token.substring(_mousePrefix.length));
 
-  /// Tap of a mouse button, routed through the same Hold state machine as the
-  /// keys: armed → the button goes down and stays down; tap it again to release;
-  /// otherwise it is a momentary click (any held modifiers ride along).
-  void _tapMouse(MouseButton button) {
-    final token = '$_mousePrefix${button.name}';
+  void _tapHold() => setState(() => _holdArmed = !_holdArmed);
+
+  /// The Hold state machine, shared by every key and mouse button. Armed ⇒
+  /// [press] it and remember [token] as held; already held ⇒ [release] it;
+  /// otherwise [tap] it once (any held modifiers ride along).
+  void _holdOrTap(
+    String token, {
+    required VoidCallback press,
+    required VoidCallback release,
+    required VoidCallback tap,
+  }) {
     if (_holdArmed) {
-      widget.input.pointerDown(button);
+      press();
       setState(() {
         _held.add(token);
         _holdArmed = false;
       });
     } else if (_held.contains(token)) {
-      widget.input.pointerUp(button);
+      release();
       setState(() => _held.remove(token));
     } else {
-      widget.input.tap(button);
+      tap();
+      return;
     }
+    _applyHeldMods(); // the held set changed; re-derive the engine flags
   }
+
+  /// Tap of a `VK_*` key, routed through the Hold state machine.
+  void _tapVk(String vk) => _tapKey(vk, vk);
+
+  /// [token] is the held-set key, [vk] the engine key. A *hold* must be a bare
+  /// keydown (`press: false`), else it silently degrades to a tap.
+  void _tapKey(String token, String vk) => _holdOrTap(
+        token,
+        press: () => widget.input.key(vk, down: true, press: false),
+        release: () => widget.input.key(vk, down: false, press: false),
+        tap: () => widget.input.key(vk, press: true),
+      );
 
   /// Tap of a modifier key. A held modifier sends BOTH a real sustained keydown
   /// (so it reads as held and chords with Fn keys) AND sets the engine flag — the
   /// flag is what makes it ride on the *letters* the system keyboard sends, since
   /// those go out as char/text events that only combine with a modifier via the
   /// flag, not via a separately-held key.
-  void _tapMod(String m) {
-    final token = 'mod:$m';
-    if (_holdArmed) {
-      widget.input.key(_modVk[m]!, down: true, press: false);
-      setState(() {
-        _held.add(token);
-        _holdArmed = false;
-      });
-      _applyHeldMods();
-    } else if (_held.contains(token)) {
-      widget.input.key(_modVk[m]!, down: false, press: false);
-      setState(() => _held.remove(token));
-      _applyHeldMods();
-    } else {
-      widget.input.key(_modVk[m]!, press: true); // momentary tap
-    }
-  }
+  void _tapMod(String m) => _tapKey('mod:$m', _modVk[m]!);
+
+  /// Tap of a mouse button. Held, it stays pressed on the peer across other
+  /// input — so you can right-drag with the other hand.
+  void _tapMouse(MouseButton button) => _holdOrTap(
+        '$_mousePrefix${button.name}',
+        press: () => widget.input.pointerDown(button),
+        release: () => widget.input.pointerUp(button),
+        tap: () => widget.input.tap(button),
+      );
 
   /// Re-assert the engine modifier flags from the currently-held modifiers.
   ///

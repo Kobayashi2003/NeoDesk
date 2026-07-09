@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:neodesk_core/neodesk_core.dart' show tr;
+import 'package:neodesk_core/neodesk_core.dart' show ConfigKeys, tr;
 
 import 'interaction_ui_mode.dart';
 
@@ -120,7 +120,7 @@ extension GestureSlotX on GestureSlot {
 class GestureMap {
   GestureMap(this._m);
 
-  static const storageKey = 'neodesk.gesturemap';
+  static const storageKey = ConfigKeys.gestureMap;
 
   /// Schema version of the persisted JSON. v2 renamed the long-press button
   /// bindings to the explicit `hold*` actions — see [_migrateLongPress].

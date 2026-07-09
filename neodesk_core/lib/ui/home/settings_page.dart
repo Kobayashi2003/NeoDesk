@@ -367,12 +367,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 builder: (_) => GestureTuningPage(config: _cfg),
               ));
             }),
-            _switchRow(
-                Icons.mouse_outlined, 'Hide cursor in Touch mode', _hideCursor,
-                (v) {
-              setState(() => _hideCursor = v);
-              _cfg.setBool(ConfigKeys.hideCursorInTouch, v);
-            }),
+            _boolRow(Icons.mouse_outlined, 'Hide cursor in Touch mode',
+                ConfigKeys.hideCursorInTouch, _hideCursor,
+                (v) => _hideCursor = v),
           ]),
           _subsection('Pointer & scrolling', [
             _sliderRow(
@@ -401,11 +398,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 (v) => setState(() => _scrollStep = _stepMin + _stepMax - v),
                 () => _cfg.set(
                     ConfigKeys.scrollStep, _scrollStep.round().toString())),
-            _switchRow(
-                Icons.swap_vert, 'Invert scroll direction', _scrollInvert, (v) {
-              setState(() => _scrollInvert = v);
-              _cfg.setBool(ConfigKeys.scrollInvert, v);
-            }),
+            _boolRow(Icons.swap_vert, 'Invert scroll direction',
+                ConfigKeys.scrollInvert, _scrollInvert,
+                (v) => _scrollInvert = v),
           ]),
           // Keys here map input sent to the remote (Fn shortcuts, hardware
           // volume-key actions); how the on-screen keyboard *looks* lives under
@@ -471,35 +466,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 (v) => setState(() => _panelOpacity = v),
                 () => _cfg.set(ConfigKeys.panelOpacity,
                     _panelOpacity.toStringAsFixed(2))),
-            _switchRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
-                _keyCompact, (v) {
-              setState(() => _keyCompact = v);
-              _cfg.setBool(ConfigKeys.keyCompact, v);
-            }),
-            _switchRow(Icons.width_normal, 'Wide keys (show full labels)',
-                _keyWide, (v) {
-              setState(() => _keyWide = v);
-              _cfg.setBool(ConfigKeys.keyWide, v);
-            }),
-            _switchRow(Icons.mouse_outlined, 'Mouse buttons panel',
-                _keyMousePanel, (v) {
-              setState(() => _keyMousePanel = v);
-              _cfg.setBool(ConfigKeys.keyMousePanel, v);
-            }),
+            _boolRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
+                ConfigKeys.keyCompact, _keyCompact, (v) => _keyCompact = v),
+            _boolRow(Icons.width_normal, 'Wide keys (show full labels)',
+                ConfigKeys.keyWide, _keyWide, (v) => _keyWide = v),
+            _boolRow(Icons.mouse_outlined, 'Mouse buttons panel',
+                ConfigKeys.keyMousePanel, _keyMousePanel,
+                (v) => _keyMousePanel = v),
           ]),
           // Other — app-level behaviour and About.
           _category('Other'),
           _card([
-            _switchRow(Icons.picture_in_picture_alt_outlined,
-                'Auto small window in background', _autoPip, (v) {
-              setState(() => _autoPip = v);
-              _cfg.setBool(ConfigKeys.autoPip, v);
-            }),
-            _switchRow(Icons.logout, 'Confirm before disconnecting',
-                _confirmDisconnect, (v) {
-              setState(() => _confirmDisconnect = v);
-              _cfg.setBool(ConfigKeys.confirmDisconnect, v);
-            }),
+            _boolRow(Icons.picture_in_picture_alt_outlined,
+                'Auto small window in background', ConfigKeys.autoPip, _autoPip,
+                (v) => _autoPip = v),
+            _boolRow(Icons.logout, 'Confirm before disconnecting',
+                ConfigKeys.confirmDisconnect, _confirmDisconnect,
+                (v) => _confirmDisconnect = v),
             _switchRow(
                 Icons.lock_outline, 'App lock (require unlock)', _appLock,
                 (v) async {
@@ -621,6 +604,15 @@ class _SettingsPageState extends State<SettingsPage> {
         trailing: Switch(value: value, onChanged: onChanged),
         onTap: () => onChanged(!value),
       );
+
+  /// A switch wired straight to a [ConfigStore] bool: [assign] updates the local
+  /// field, [key] receives the same value. Keeps the two from drifting apart.
+  Widget _boolRow(IconData icon, String label, String key, bool value,
+          ValueChanged<bool> assign) =>
+      _switchRow(icon, label, value, (v) {
+        setState(() => assign(v));
+        _cfg.setBool(key, v);
+      });
 
   /// A setting whose slider is hidden until the row is tapped (accordion).
   Widget _sliderRow(IconData icon, String label, String? valueText,
