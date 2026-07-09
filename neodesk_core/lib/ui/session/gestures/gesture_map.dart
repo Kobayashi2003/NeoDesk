@@ -57,9 +57,6 @@ extension GestureActionX on GestureAction {
         GestureAction.scrollWheel => tr('Scroll wheel'),
       };
 
-  /// Continuous actions are applied each frame of a drag/pinch.
-  bool get isContinuous => index >= GestureAction.moveCursor.index;
-
   /// Presses a button on trigger and releases it on lift (drag while held).
   bool get isHold => switch (this) {
         GestureAction.holdLeft ||
@@ -110,17 +107,6 @@ extension GestureSlotX on GestureSlot {
         GestureSlot.twoFingerPinch => tr('Two-finger pinch'),
         GestureSlot.threeFingerTap => tr('Three-finger tap'),
         GestureSlot.fourFingerTap => tr('Four-finger tap'),
-      };
-
-  /// Continuous triggers bind to continuous actions (drag/pinch); discrete to
-  /// discrete actions.
-  bool get isContinuous => switch (this) {
-        GestureSlot.oneFingerDrag ||
-        GestureSlot.twoFingerDragH ||
-        GestureSlot.twoFingerDragV ||
-        GestureSlot.twoFingerPinch =>
-          true,
-        _ => false,
       };
 }
 

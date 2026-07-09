@@ -130,7 +130,7 @@ class GestureEngine {
     if (f == null) return;
     f.pos = pos;
 
-    if (!_moved && (pos - f.down).distance > tuning.dragSlop) {
+    if (!_moved && (pos - f.start).distance > tuning.dragSlop) {
       _moved = true;
       _lpTimer?.cancel();
     }
@@ -179,20 +179,22 @@ class GestureEngine {
 
   // ---- internals ------------------------------------------------------------
 
-  /// The gesture still takes new fingers. Everything before the long-press
-  /// deadline is the multi-finger trigger period; past it the touch is a long
-  /// press (or nothing), and a finger landing then voids the tap rather than
-  /// silently degrading it — a two-finger press must never fire a one-finger
-  /// click.
-  bool get _accepting => DateTime.now().difference(_downAt) < tuning.longPress;
+  /// Spread change (as a fraction of the fingers' initial distance) that a
+  /// multi-finger tap may still show before it reads as a pinch.
+  static const _tapSpreadTolerance = 0.08;
+
+  Duration get _elapsed => DateTime.now().difference(_downAt);
+
+  /// Inside the multi-finger trigger period: the gesture still takes new fingers
+  /// and a lift still fires a tap. Past it the touch is a long press (or
+  /// nothing), and a finger landing then voids the tap rather than silently
+  /// degrading it — a two-finger press must never fire a one-finger click.
+  bool get _accepting => _elapsed < tuning.longPress;
 
   /// Two-finger continuous actions are still withheld, so a 3rd/4th finger can
   /// pre-empt them. Never outlives the deadline (the sliders do allow
   /// `collectMs > longPressMs`).
-  bool get _collecting {
-    final since = DateTime.now().difference(_downAt);
-    return since < tuning.collect && since < tuning.longPress;
-  }
+  bool get _collecting => _elapsed < tuning.collect && _accepting;
 
   void _onLongPress() {
     if (_fingers.length != 1 || _moved || _holding) return;
@@ -211,44 +213,38 @@ class GestureEngine {
     final (a, b) = _twoPositions();
     final dist = (a - b).distance;
     final mid = (a + b) / 2;
+    final dMid = mid - _lastMid;
 
     // Accumulate even while withheld, or a fast two-finger swipe that ends
     // inside the collection window would look perfectly still to [_fireTap].
-    _travel += (mid - _lastMid).distance;
+    _travel += dMid.distance;
     final spreadDev = _startDist == 0 ? 0.0 : (dist / _startDist - 1).abs();
     if (spreadDev > _maxZoomDev) _maxZoomDev = spreadDev;
 
-    if (_collecting) {
-      _lastDist = dist;
-      _lastMid = mid;
-      _lastCentroid = mid;
-      return;
-    }
-
-    if (_twoKind == TwoFingerKind.undecided) {
-      _twoKind = classifyTwoFinger(
-        startA: _startA,
-        startB: _startB,
-        a: a,
-        b: b,
-        startDist: _startDist,
-        startCentroid: _startMid,
-        zoomActivate: tuning.zoomActivate,
-        dragSlop: tuning.dragSlop,
-      );
-    }
-
-    final dMid = mid - _lastMid;
-    switch (_twoKind) {
-      case TwoFingerKind.pinch:
-        sink.continuous(GestureSlot.twoFingerPinch,
-            zoom: _lastDist == 0 ? 1.0 : dist / _lastDist, focal: mid);
-      case TwoFingerKind.pan:
-        sink.continuous(GestureSlot.twoFingerDragH, delta: dMid);
-      case TwoFingerKind.scroll:
-        sink.continuous(GestureSlot.twoFingerDragV, delta: dMid);
-      case TwoFingerKind.undecided:
-        break;
+    if (!_collecting) {
+      if (_twoKind == TwoFingerKind.undecided) {
+        _twoKind = classifyTwoFinger(
+          startA: _startA,
+          startB: _startB,
+          a: a,
+          b: b,
+          startDist: _startDist,
+          startCentroid: _startMid,
+          zoomActivate: tuning.zoomActivate,
+          dragSlop: tuning.dragSlop,
+        );
+      }
+      switch (_twoKind) {
+        case TwoFingerKind.pinch:
+          sink.continuous(GestureSlot.twoFingerPinch,
+              zoom: _lastDist == 0 ? 1.0 : dist / _lastDist, focal: mid);
+        case TwoFingerKind.pan:
+          sink.continuous(GestureSlot.twoFingerDragH, delta: dMid);
+        case TwoFingerKind.scroll:
+          sink.continuous(GestureSlot.twoFingerDragV, delta: dMid);
+        case TwoFingerKind.undecided:
+          break;
+      }
     }
     _lastDist = dist;
     _lastMid = mid;
@@ -256,8 +252,9 @@ class GestureEngine {
   }
 
   void _end(int id, {required bool clickable}) {
-    final wasHold = _holding;
-    final wasLp = _lpFired;
+    // Read before the lift mutates anything. A long press consumes the touch
+    // whether it merely fired or went on to hold, so `_lpFired` covers both.
+    final spent = _consumed || _cancelled || _lateFinger || _lpFired;
     _fingers.remove(id);
     _lpTimer?.cancel();
     if (_holding) {
@@ -271,11 +268,7 @@ class GestureEngine {
     // *one-finger* tap: fingers routinely roll past dragSlop as a multi-finger
     // tap lands, and whether that became a drag is [_fireTap]'s call.
     if (clickable &&
-        !_consumed &&
-        !_cancelled &&
-        !_lateFinger &&
-        !wasHold &&
-        !wasLp &&
+        !spent &&
         (_maxFingers > 1 || !_moved) &&
         (tuning.earlyTap || allUp)) {
       if (_fireTap()) _consumed = true;
@@ -301,8 +294,8 @@ class GestureEngine {
     }
     if (_maxFingers > 4) return false; // a palm, not a gesture
     final clean = _travel < tuning.tapSlop &&
-        _maxZoomDev < 0.08 &&
-        DateTime.now().difference(_downAt) < tuning.longPress &&
+        _maxZoomDev < _tapSpreadTolerance &&
+        _accepting &&
         _twoKind == TwoFingerKind.undecided;
     if (!clean) return false;
     sink.tap(
@@ -355,7 +348,9 @@ class GestureEngine {
 }
 
 class _Finger {
-  _Finger(this.down) : pos = down;
-  final Offset down;
+  _Finger(this.start) : pos = start;
+
+  /// Where this finger landed; [pos] is where it is now.
+  final Offset start;
   Offset pos;
 }

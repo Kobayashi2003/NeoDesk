@@ -528,22 +528,19 @@ class SessionController extends ChangeNotifier {
     _edgePanTimer = null;
   }
 
-  /// Normalised edge push for a screen point, scaled by [edgePanSpeed] — zero
-  /// unless [p] is inside the [_edgeMargin] band, then proportional to depth.
+  /// How deep [p] sits in the edge band of an axis of length [extent], as a
+  /// signed -1..1 fraction. Zero anywhere outside the band.
+  static double _edgeDepth(double p, double extent) {
+    if (p < _edgeMargin) return -(_edgeMargin - p) / _edgeMargin;
+    if (p > extent - _edgeMargin) return (p - (extent - _edgeMargin)) / _edgeMargin;
+    return 0;
+  }
+
+  /// Edge push for a screen point, scaled by [edgePanSpeed] — zero unless [p] is
+  /// inside the [_edgeMargin] band, then proportional to depth.
   Offset _edgePush(Offset p, CanvasView v) {
-    double ex = 0, ey = 0;
-    if (p.dx < _edgeMargin) {
-      ex = -(_edgeMargin - p.dx) / _edgeMargin;
-    } else if (p.dx > v.vw - _edgeMargin) {
-      ex = (p.dx - (v.vw - _edgeMargin)) / _edgeMargin;
-    }
-    if (p.dy < _edgeMargin) {
-      ey = -(_edgeMargin - p.dy) / _edgeMargin;
-    } else if (p.dy > v.vh - _edgeMargin) {
-      ey = (p.dy - (v.vh - _edgeMargin)) / _edgeMargin;
-    }
-    if (ex == 0 && ey == 0) return Offset.zero;
-    return Offset(ex * edgePanSpeed, ey * edgePanSpeed);
+    final depth = Offset(_edgeDepth(p.dx, v.vw), _edgeDepth(p.dy, v.vh));
+    return depth == Offset.zero ? Offset.zero : depth * edgePanSpeed;
   }
 
   // --- Long-press hold-drag edge continuation --------------------------------

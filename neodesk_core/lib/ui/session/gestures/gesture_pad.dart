@@ -104,12 +104,8 @@ class _SessionSink extends GestureSink {
 
   @override
   void holdDrag(Offset absPos, Offset delta) {
-    _c.updateHoldFinger(absPos);
-    if (_touch) {
-      _c.cursorTo(absPos);
-    } else {
-      _c.moveCursorBy(delta);
-    }
+    _c.updateHoldFinger(absPos); // drives the edge continuation
+    _moveCursor(absPos, delta);
   }
 
   @override
@@ -146,18 +142,22 @@ class _SessionSink extends GestureSink {
     }
   }
 
-  /// Drag the cursor: absolutely in Touch mode, relatively (with edge auto-pan)
-  /// in Pointer mode.
-  void _dragCursor(Offset absPos, Offset delta) {
+  /// Touch mode is absolute (the cursor goes under the finger), Pointer relative.
+  void _moveCursor(Offset absPos, Offset delta) {
     if (_touch) {
       _c.cursorTo(absPos);
-      return;
+    } else {
+      _c.moveCursorBy(delta);
     }
-    if (!_dragArmed) {
+  }
+
+  /// As [_moveCursor], but a Pointer-mode drag also arms edge auto-pan.
+  void _dragCursor(Offset absPos, Offset delta) {
+    if (!_touch && !_dragArmed) {
       _dragArmed = true;
       _c.beginPointerDrag(); // edge auto-pan (FakeCore only)
     }
-    _c.moveCursorBy(delta);
+    _moveCursor(absPos, delta);
   }
 
   @override
