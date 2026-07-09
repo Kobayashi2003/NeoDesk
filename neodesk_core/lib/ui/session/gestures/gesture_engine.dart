@@ -51,15 +51,15 @@ abstract class GestureSink {
 ///
 /// A touch sequence has two deadlines, both measured from the first finger's
 /// touch-down:
-///  1. the **collection window** ([GestureTuning.collectMs]) — fingers landing
-///     inside it join the gesture and re-fix [_anchor]; once it closes the
-///     finger count is frozen and a straggler cancels the tap. Two-finger
-///     continuous actions are withheld for the same window so a 3rd/4th finger
-///     can still pre-empt them.
-///  2. the **long-press deadline** ([GestureTuning.longPressMs]) — lifting
-///     before it fires the tap for the collected count. It is also the instant a
-///     one-finger long press buzzes; a second finger cancels that timer, so a
-///     multi-finger gesture never buzzes.
+///  1. the **long-press deadline** ([GestureTuning.longPressMs]) — everything
+///     before it is the multi-finger trigger period: a finger landing then joins
+///     the gesture and re-fixes [_anchor], and lifting then fires the tap for
+///     the collected count. It is also the instant a one-finger long press
+///     buzzes; a second finger cancels that timer, so a multi-finger gesture
+///     never buzzes. A finger landing *after* it voids the tap.
+///  2. the **collection window** ([GestureTuning.collectMs]), a shorter one —
+///     two-finger continuous actions are withheld while it is open, so a 3rd or
+///     4th finger arriving a beat later can still pre-empt a scroll or pinch.
 class GestureEngine {
   GestureEngine({required this.tuning, required this.sink});
 
@@ -80,7 +80,8 @@ class GestureEngine {
   bool _lpFired = false;
   bool _holding = false;
   bool _consumed = false; // a tap already fired (early-tap guards re-fire)
-  bool _lateFinger = false; // landed after the collection window closed
+  bool _lateFinger = false; // landed after the long-press deadline
+  bool _cancelled = false; // a pointer was cancelled: the sequence is void
   Timer? _lpTimer;
 
   // Two-finger state.
@@ -113,7 +114,7 @@ class GestureEngine {
         _holding = false;
       }
       _twoKind = TwoFingerKind.undecided;
-      if (_collecting) {
+      if (_accepting) {
         if (_fingers.length > _maxFingers) _maxFingers = _fingers.length;
         _anchor = pos;
       } else {
@@ -159,14 +160,39 @@ class GestureEngine {
   }
 
   void up(int id) => _end(id, clickable: true);
-  void cancel(int id) => _end(id, clickable: false);
 
-  void dispose() => _lpTimer?.cancel();
+  /// The platform took the pointer away (gesture arena, backgrounding). Void the
+  /// whole sequence, not just this finger: the fingers still down did not agree
+  /// to anything, so lifting them must not fire a tap.
+  void cancel(int id) {
+    _cancelled = true;
+    _end(id, clickable: false);
+  }
+
+  void dispose() {
+    _lpTimer?.cancel();
+    if (_holding) {
+      sink.holdEnd(); // else the peer's mouse button stays pressed
+      _holding = false;
+    }
+  }
 
   // ---- internals ------------------------------------------------------------
 
-  /// Still inside the finger-collection window.
-  bool get _collecting => DateTime.now().difference(_downAt) < tuning.collect;
+  /// The gesture still takes new fingers. Everything before the long-press
+  /// deadline is the multi-finger trigger period; past it the touch is a long
+  /// press (or nothing), and a finger landing then voids the tap rather than
+  /// silently degrading it — a two-finger press must never fire a one-finger
+  /// click.
+  bool get _accepting => DateTime.now().difference(_downAt) < tuning.longPress;
+
+  /// Two-finger continuous actions are still withheld, so a 3rd/4th finger can
+  /// pre-empt them. Never outlives the deadline (the sliders do allow
+  /// `collectMs > longPressMs`).
+  bool get _collecting {
+    final since = DateTime.now().difference(_downAt);
+    return since < tuning.collect && since < tuning.longPress;
+  }
 
   void _onLongPress() {
     if (_fingers.length != 1 || _moved || _holding) return;
@@ -246,6 +272,7 @@ class GestureEngine {
     // tap lands, and whether that became a drag is [_fireTap]'s call.
     if (clickable &&
         !_consumed &&
+        !_cancelled &&
         !_lateFinger &&
         !wasHold &&
         !wasLp &&
@@ -306,6 +333,7 @@ class GestureEngine {
     _lpFired = false;
     _consumed = false;
     _lateFinger = false;
+    _cancelled = false;
     _twoKind = TwoFingerKind.undecided;
     _travel = 0;
     _maxZoomDev = 0;

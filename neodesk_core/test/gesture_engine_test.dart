@@ -128,34 +128,39 @@ void main() {
     });
   });
 
-  group('finger-collection window', () {
-    GestureEngine collecting() => GestureEngine(
-          tuning: const GestureTuning(longPressMs: 500, collectMs: 60),
+  group('fingers keep joining until the long-press deadline', () {
+    // The collection window (60ms) is much shorter than the deadline (200ms):
+    // it only withholds two-finger continuous actions, it does not close the
+    // gesture to new fingers.
+    GestureEngine slowJoin() => GestureEngine(
+          tuning: const GestureTuning(longPressMs: 200, collectMs: 60),
           sink: sink,
         );
 
-    test('a finger landing after the window cancels the tap', () async {
-      final e = collecting();
+    test('a finger landing past the collection window still joins', () async {
+      final e = slowJoin();
       e.down(1, const Offset(50, 50));
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      e.down(2, const Offset(200, 200)); // too late to be collected
-      e.up(1);
-      e.up(2);
-
-      // Neither a two-finger tap (not collected) nor a one-finger one.
-      expect(sink.taps, isEmpty);
-    });
-
-    test('a finger landing inside the window is collected', () async {
-      final e = collecting();
-      e.down(1, const Offset(50, 50));
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      e.down(2, const Offset(200, 200));
+      e.down(2, const Offset(200, 200)); // past collectMs, before the deadline
       e.up(1);
       e.up(2);
 
       expect(sink.taps.single.$1, GestureSlot.twoFingerTap);
-      expect(sink.taps.single.$2, const Offset(200, 200));
+      expect(sink.taps.single.$2, const Offset(200, 200)); // re-anchored
+    });
+
+    test('a finger landing after the deadline voids the tap', () async {
+      final e = slowJoin();
+      e.down(1, const Offset(50, 50));
+      // Past the deadline: the long press already resolved (bound to `none`
+      // here, so it consumed nothing) and the gesture takes no more fingers.
+      await Future<void>.delayed(const Duration(milliseconds: 240));
+      e.down(2, const Offset(200, 200));
+      e.up(1);
+      e.up(2);
+
+      // Crucially not a *one-finger* tap: two fingers were pressed.
+      expect(sink.taps, isEmpty);
     });
   });
 
@@ -220,6 +225,58 @@ void main() {
 
       expect(sink.taps.single.$1, GestureSlot.threeFingerTap);
       expect(sink.continuousSlots, isEmpty); // no stray scroll/pinch
+    });
+  });
+
+  group('cancellation', () {
+    test('a cancelled finger poisons the whole sequence', () {
+      final e = engineWith();
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200));
+      e.cancel(1); // the arena stole the pointer / the app was backgrounded
+      e.up(2);
+
+      expect(sink.taps, isEmpty);
+    });
+
+    test('a fresh sequence after a cancel still taps', () {
+      final e = engineWith();
+      e.down(1, const Offset(50, 50));
+      e.cancel(1);
+      e.down(2, const Offset(80, 80));
+      e.up(2);
+
+      expect(sink.taps.single.$1, GestureSlot.oneFingerTap);
+    });
+  });
+
+  group('disposal', () {
+    test('releases a held button', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(70, 70));
+      await pastLongPress();
+      e.dispose();
+
+      expect(sink.holdEnds, 1); // else the peer's mouse button stays down
+    });
+  });
+
+  group('the collection window never outlives the tap deadline', () {
+    test('two fingers apply continuous once the long-press deadline passes',
+        () async {
+      // collectMs > longPressMs is reachable from the sliders (300 vs 200).
+      final e = GestureEngine(
+        tuning: const GestureTuning(longPressMs: 200, collectMs: 300),
+        sink: sink,
+      );
+      e.down(1, const Offset(100, 200));
+      e.down(2, const Offset(160, 200));
+      await Future<void>.delayed(const Duration(milliseconds: 230));
+      e.move(1, const Offset(100, 260), const Offset(0, 60));
+      e.move(2, const Offset(160, 260), const Offset(0, 60));
+
+      expect(sink.continuousSlots, isNotEmpty);
     });
   });
 

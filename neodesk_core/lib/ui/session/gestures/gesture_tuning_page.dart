@@ -147,8 +147,11 @@ class _GestureTestAreaState extends State<_GestureTestArea> {
   String _last = '';
   int _fingers = 0;
 
+  /// [GestureSink.continuous] reports the same label every frame of a drag, so
+  /// only rebuild when the readout actually changes.
   void _report(String s) {
-    if (mounted) setState(() => _last = s);
+    if (!mounted || s == _last) return;
+    setState(() => _last = s);
   }
 
   @override
@@ -214,6 +217,11 @@ class _GestureTestAreaState extends State<_GestureTestArea> {
 }
 
 /// Turns recognised gestures into a human-readable label for the test area.
+///
+/// This sandbox exercises the *thresholds*, not the bindings — it has no
+/// [GestureMap] — so it always takes the hold path on a long press, whatever the
+/// user actually bound that slot to. Timings and slops behave exactly as in a
+/// session; the long-press *outcome* does not.
 class _TestSink extends GestureSink {
   _TestSink(this.report);
 
@@ -225,8 +233,7 @@ class _TestSink extends GestureSink {
   @override
   LongPressOutcome longPress(GestureSlot slot, Offset at) {
     report(tr('Long press'));
-    // Let the hold path run so a following drag shows up too.
-    return LongPressOutcome.holding;
+    return LongPressOutcome.holding; // so a following drag shows up too
   }
 
   @override

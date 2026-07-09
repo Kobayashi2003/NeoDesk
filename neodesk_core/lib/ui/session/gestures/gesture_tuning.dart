@@ -29,13 +29,11 @@ class GestureTuning {
   /// would fire is the multi-finger trigger period (see `GestureEngine`).
   final int longPressMs;
 
-  /// How long after the *first* touch the gesture keeps collecting fingers.
+  /// How long after the *first* touch two-finger continuous actions
+  /// (scroll/pinch/pan) are withheld, so a 3rd or 4th finger arriving a beat
+  /// later can still pre-empt them.
   ///
-  /// This is the moment the gesture's finger count is decided. Until it closes,
-  /// a newly landed finger joins the gesture and re-fixes its trigger position;
-  /// after it, the count is frozen and a late finger cancels the tap. Two-finger
-  /// continuous actions (scroll/pinch/pan) are withheld for the same window, so
-  /// a 3rd or 4th finger arriving a beat later can still pre-empt them.
+  /// It does *not* bound which fingers join the gesture — [longPressMs] does.
   final int collectMs;
 
   /// Movement (px) before a touch counts as a drag (and cancels the long-press).
