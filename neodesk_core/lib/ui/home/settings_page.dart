@@ -359,12 +359,12 @@ class _SettingsPageState extends State<SettingsPage> {
           _subsection('Interaction', [
             _row(Icons.touch_app, 'Default mode',
                 value: _mode.label, onTap: _pickMode),
-            _row(Icons.gesture, 'Customize gestures', onTap: () {
+            _pageRow(Icons.gesture, 'Customize gestures', () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => GestureSettingsPage(config: _cfg),
               ));
             }),
-            _row(Icons.tune, 'Gesture sensitivity', onTap: () {
+            _pageRow(Icons.tune, 'Gesture sensitivity', () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => GestureTuningPage(config: _cfg),
               ));
@@ -420,7 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // volume-key actions); how the on-screen keyboard *looks* lives under
           // Interface instead.
           _subsection('Keyboard & keys', [
-            _row(Icons.keyboard_command_key, 'Shortcut combos', onTap: () {
+            _pageRow(Icons.keyboard_command_key, 'Shortcut combos', () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => ComboSettingsPage(config: _cfg),
               ));
@@ -601,8 +601,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
 
-  Widget _row(IconData icon, String label,
-          {String? value, VoidCallback? onTap}) =>
+  Widget _tile(IconData icon, String label,
+          {String? value, VoidCallback? onTap, bool chevron = false}) =>
       ListTile(
         leading: Icon(icon, color: AppColors.textSecondary),
         title: Text(tr(label), style: AppTypography.body),
@@ -610,21 +610,42 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (value != null) Text(tr(value), style: AppTypography.caption),
-            const SizedBox(width: 4),
-            if (onTap != null)
+            if (chevron) ...[
+              const SizedBox(width: 4),
               Icon(Icons.chevron_right,
                   color: AppColors.textDisabled, size: 20),
+            ],
           ],
         ),
         onTap: onTap,
       );
+
+  /// A plain row: read-only, or tapped to open a sheet / run an action. It gets
+  /// no chevron — a sheet rises over the page rather than taking you somewhere.
+  Widget _row(IconData icon, String label,
+          {String? value, VoidCallback? onTap}) =>
+      _tile(icon, label, value: value, onTap: onTap);
+
+  /// A row that pushes a sub-page. The chevron means exactly this and nothing
+  /// else, so it stays a reliable signal.
+  Widget _pageRow(IconData icon, String label, VoidCallback onTap) =>
+      _tile(icon, label, onTap: onTap, chevron: true);
 
   Widget _switchRow(IconData icon, String label, bool value,
           ValueChanged<bool> onChanged) =>
       ListTile(
         leading: Icon(icon, color: AppColors.textSecondary),
         title: Text(tr(label), style: AppTypography.body),
-        trailing: Switch(value: value, onChanged: onChanged),
+        // Scaled down to sit at roughly the leading icon's 24px, so the row
+        // doesn't read as lopsided. Transform keeps the tap target generous.
+        trailing: Transform.scale(
+          scale: 0.75,
+          child: Switch(
+            value: value,
+            onChanged: onChanged,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
         onTap: () => onChanged(!value),
       );
 
