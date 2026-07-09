@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
+/// Text-size multiplier for neodesk's own UI. The root wraps the tree in a
+/// `MediaQuery` carrying `TextScaler.linear(appTextScale.value)` and listens for
+/// changes. Mirrors the `appBrightness` / `appLocale` reactive pattern.
+final ValueNotifier<double> appTextScale = ValueNotifier(1.0);
+
+/// Bounds for the Font size setting; 1.0 is the platform default.
+const double kTextScaleMin = 0.8, kTextScaleMax = 1.4;
+
+/// Apply a stored Font-size setting (a decimal string) to the live UI.
+void applyTextScale(String setting) => appTextScale.value =
+    (double.tryParse(setting) ?? 1.0).clamp(kTextScaleMin, kTextScaleMax);
+
 /// Type scale. See DESIGN.md §2.2.
 ///
 /// Decision (DESIGN §9): use the system font, recover the Spotify feel through

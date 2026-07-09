@@ -158,6 +158,9 @@ class OverlayChrome extends StatelessWidget {
                         controller.toggleSpecialKeyboard),
                     _tool(Icons.bolt, 'Combos',
                         controller.toggleCombosKeyboard),
+                    if (controller.mousePanel)
+                      _tool(Icons.mouse_outlined, 'Mouse',
+                          controller.toggleMouseKeyboard),
                     _tool(Icons.more_horiz, 'More', () => _more(context)),
                   ],
                 ),

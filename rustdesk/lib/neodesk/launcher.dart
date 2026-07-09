@@ -16,6 +16,7 @@ import 'package:neodesk_core/ui/session/cursor_override.dart';
 import 'package:neodesk_core/ui/session/frame_override.dart';
 import 'package:neodesk_core/ui/theme/app_colors.dart';
 import 'package:neodesk_core/ui/theme/app_theme.dart';
+import 'package:neodesk_core/ui/theme/app_typography.dart';
 
 import '../common.dart' show gFFI, MyTheme;
 import '../consts.dart' show kCommConfKeyLang;
@@ -109,6 +110,7 @@ void setupNeodesk() {
   applyThemeSetting(
       neodeskCore.config.get(ConfigKeys.theme, defaultValue: 'dark'));
   appBrightness.addListener(() => Get.changeThemeMode(neodeskThemeMode()));
+  applyTextScale(neodeskCore.config.get(ConfigKeys.fontScale));
   neodeskFrameOverride = (context) => const RustdeskFrameWidget();
   neodeskCanvasOverride = _RustdeskCanvasControl();
   neodeskCursorOverride = _RustdeskCursorControl();
@@ -177,7 +179,7 @@ class _RustdeskCanvasControl implements NeodeskCanvasControl {
 }
 
 /// Home widget: neodesk's HomeShell under the app theme + lock gate. Rebuilds the
-/// whole UI when the Language or Theme setting changes.
+/// whole UI when the Language, Theme or Font-size setting changes.
 class NeodeskEntry extends StatelessWidget {
   const NeodeskEntry({super.key});
 
@@ -187,11 +189,18 @@ class NeodeskEntry extends StatelessWidget {
       valueListenable: appLocale,
       builder: (context, _, __) => ValueListenableBuilder<Brightness>(
         valueListenable: appBrightness,
-        builder: (context, brightness, __) => Theme(
-          data: AppTheme.build(brightness),
-          child: AppLockGate(
-            core: neodeskCore,
-            child: HomeShell(core: neodeskCore),
+        builder: (context, brightness, __) => ValueListenableBuilder<double>(
+          valueListenable: appTextScale,
+          builder: (context, scale, __) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(scale)),
+            child: Theme(
+              data: AppTheme.build(brightness),
+              child: AppLockGate(
+                core: neodeskCore,
+                child: HomeShell(core: neodeskCore),
+              ),
+            ),
           ),
         ),
       ),

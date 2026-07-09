@@ -39,6 +39,8 @@ class SessionController extends ChangeNotifier {
     zoomMax = _readDouble(ConfigKeys.zoomMax, 3.0);
     scrollStep = _readDouble(ConfigKeys.scrollStep, 24);
     scrollStripVisible = core.config.getBool(ConfigKeys.scrollStrip);
+    mousePanel =
+        core.config.getBool(ConfigKeys.keyMousePanel, defaultValue: true);
     edgePanSpeed = _readEdgePanSpeed();
     qualityMonitorDetailed =
         core.config.get(ConfigKeys.qualityMonitorDetail) == 'detailed';
@@ -101,6 +103,10 @@ class SessionController extends ChangeNotifier {
   bool mouseKeyboard = false;
   bool get keyboardVisible =>
       systemKeyboard || specialKeyboard || combosKeyboard || mouseKeyboard;
+
+  /// Whether the mouse-buttons surface is offered at all (its toolbar button and
+  /// its keyboard chip). Read once per session — see [ConfigKeys.keyMousePanel].
+  late bool mousePanel;
 
   /// Demo-only local canvas transform for the placeholder frame. On the real
   /// engine the transform lives in `canvasModel` (read via [view]); this stays
@@ -178,11 +184,7 @@ class SessionController extends ChangeNotifier {
       double.tryParse(core.config.get(key)) ?? fallback;
 
   double _readEdgePanSpeed() =>
-      switch (core.config.get(ConfigKeys.edgePanSpeed)) {
-        'slow' => 3.5,
-        'fast' => 9.0,
-        _ => 6.0, // medium
-      };
+      edgePanSpeedFrom(core.config.get(ConfigKeys.edgePanSpeed));
 
   // --- Coordinate model ------------------------------------------------------
 

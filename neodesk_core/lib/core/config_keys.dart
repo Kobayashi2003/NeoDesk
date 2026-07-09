@@ -57,9 +57,12 @@ abstract final class ConfigKeys {
   /// rows so long labels aren't clipped (bool).
   static const keyWide = 'neodesk.kbd.wide';
 
-  /// Offer the mouse-buttons panel (its chip in the keyboard's control strip).
-  /// Defaults to on. (bool)
+  /// Offer the mouse-buttons panel (its chip in the keyboard's control strip and
+  /// its toolbar button). Defaults to on. (bool)
   static const keyMousePanel = 'neodesk.kbd.mousepanel';
+
+  /// Text-size multiplier for neodesk's own UI (decimal string, 0.8–1.4).
+  static const fontScale = 'neodesk.fontscale';
 
   /// What each phone volume key does during a session — an action token (`off`,
   /// `scrollUp`/`scrollDown`, `left`/`right`, a modifier `ctrl`/`alt`/`shift`/
@@ -100,3 +103,13 @@ abstract final class ConfigKeys {
   /// default on).
   static const followRemoteCursor = 'neodesk.followcursor';
 }
+
+/// Reads [ConfigKeys.edgePanSpeed] as screen px per tick. Stored as a number
+/// since 1.11; the pre-1.11 `slow` / `medium` / `fast` tokens still map onto the
+/// values they used to mean, so upgrading doesn't silently change the feel.
+double edgePanSpeedFrom(String raw) => switch (raw) {
+      'slow' => 3.5,
+      'fast' => 9.0,
+      'medium' || '' => 6.0,
+      _ => double.tryParse(raw) ?? 6.0,
+    };

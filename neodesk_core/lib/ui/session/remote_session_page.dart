@@ -395,8 +395,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
                   onToggleMouse: _c.toggleMouseKeyboard,
                   onHide: _c.hideKeyboard,
                   combos: ComboStore.load(_c.core.config),
-                  showMouse: _c.core.config
-                      .getBool(ConfigKeys.keyMousePanel, defaultValue: true),
+                  showMouse: _c.mousePanel,
                   opacity: double.tryParse(
                           _c.core.config.get(ConfigKeys.panelOpacity)) ??
                       0.9,

@@ -30,18 +30,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   ConfigStore get _cfg => widget.core.config;
 
-  // Preset tables (the slider-driven pointer/scroll speeds are stored as raw
-  // numbers; these remain pickers).
-  static const _maxZooms = <_Option>[
-    (label: '2×', value: '2.0', sub: null),
-    (label: '3×', value: '3.0', sub: null),
-    (label: '4×', value: '4.0', sub: null),
-  ];
-  static const _edgePans = <_Option>[
-    (label: 'Slow', value: 'slow', sub: null),
-    (label: 'Medium', value: 'medium', sub: null),
-    (label: 'Fast', value: 'fast', sub: null),
-  ];
+  // Preset tables. Numeric settings are sliders (see [_sliderRow]); only the
+  // genuinely enumerated ones remain pickers.
   static const _keySizes = <_Option>[
     (label: 'Small', value: 'small', sub: null),
     (label: 'Medium', value: 'medium', sub: null),
@@ -92,12 +82,21 @@ class _SettingsPageState extends State<SettingsPage> {
   // Slider bounds.
   static const _gainMin = 0.6, _gainMax = 3.0;
   static const _stepMin = 10.0, _stepMax = 48.0; // px per wheel notch
+  static const _zoomMin = 1.5, _zoomMax = 6.0;
+  static const _edgePanMin = 2.0, _edgePanMax = 12.0; // screen px per tick
+  static const _opacityMin = 0.55, _opacityMax = 1.0;
+
+  /// Renders a raw slider position as a percentage of its range — for settings
+  /// whose absolute number means nothing to the user.
+  static String Function(double) _percentOf(double min, double max) =>
+      (v) => '${((v - min) / (max - min) * 100).round()}%';
 
   late InteractionUiMode _mode;
   late double _pointerGain; // pointer.gainBase
   late double _scrollStep; // scroll.step (smaller = faster)
-  late String _maxZoom;
-  late String _edgePan;
+  late double _maxZoom;
+  late double _edgePan;
+  late double _fontScale;
   late bool _scrollInvert;
   late bool _hideCursor;
   late double _panelOpacity; // panel.opacity
@@ -114,9 +113,10 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _confirmDisconnect;
   late String _qualityDetail;
 
-  /// Which slider row is currently expanded (accordion; null = all collapsed).
-  /// Sliders are hidden behind a tap so the list stays compact.
-  String? _openSlider;
+  /// The label of the row currently being edited in place (null = none), and its
+  /// uncommitted value. See [_sliderRow].
+  String? _editing;
+  double _draft = 0;
 
   @override
   void initState() {
@@ -128,8 +128,12 @@ class _SettingsPageState extends State<SettingsPage> {
             .clamp(_gainMin, _gainMax);
     _scrollStep = (double.tryParse(_cfg.get(ConfigKeys.scrollStep)) ?? 24)
         .clamp(_stepMin, _stepMax);
-    _maxZoom = _cfg.get(ConfigKeys.zoomMax, defaultValue: '3.0');
-    _edgePan = _cfg.get(ConfigKeys.edgePanSpeed, defaultValue: 'medium');
+    _maxZoom = (double.tryParse(_cfg.get(ConfigKeys.zoomMax)) ?? 3.0)
+        .clamp(_zoomMin, _zoomMax);
+    _edgePan = edgePanSpeedFrom(_cfg.get(ConfigKeys.edgePanSpeed))
+        .clamp(_edgePanMin, _edgePanMax);
+    _fontScale = (double.tryParse(_cfg.get(ConfigKeys.fontScale)) ?? 1.0)
+        .clamp(kTextScaleMin, kTextScaleMax);
     _scrollInvert = _cfg.getBool(ConfigKeys.scrollInvert);
     _hideCursor =
         _cfg.getBool(ConfigKeys.hideCursorInTouch, defaultValue: true);
@@ -159,8 +163,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   late String _version;
-
-  static const _opacityMin = 0.55, _opacityMax = 1.0;
 
   String _labelOf(List<_Option> opts, String value) =>
       opts.firstWhere((o) => o.value == value, orElse: () => opts.first).label;
@@ -372,32 +374,44 @@ class _SettingsPageState extends State<SettingsPage> {
                 (v) => _hideCursor = v),
           ]),
           _subsection('Pointer & scrolling', [
-            _sliderRow(
-                Icons.speed,
-                'Pointer speed',
-                '${_pointerGain.toStringAsFixed(1)}×',
-                _pointerGain,
-                _gainMin,
-                _gainMax,
-                (v) => setState(() => _pointerGain = v),
-                () => _cfg.set(ConfigKeys.pointerGainBase,
-                    _pointerGain.toStringAsFixed(2))),
-            _row(Icons.zoom_in, 'Max zoom',
-                value: _labelOf(_maxZooms, _maxZoom),
-                onTap: () => _pickOption('Max zoom', _maxZooms,
-                    ConfigKeys.zoomMax, _maxZoom,
-                    (v) => setState(() => _maxZoom = v))),
-            _row(Icons.open_in_full, 'Edge auto-pan speed',
-                value: _labelOf(_edgePans, _edgePan),
-                onTap: () => _pickOption('Edge auto-pan speed', _edgePans,
-                    ConfigKeys.edgePanSpeed, _edgePan,
-                    (v) => setState(() => _edgePan = v))),
-            // Slider runs slow→fast; internally a smaller px-per-notch is faster.
-            _sliderRow(Icons.swipe_vertical, 'Scroll speed', null,
-                _stepMin + _stepMax - _scrollStep, _stepMin, _stepMax,
-                (v) => setState(() => _scrollStep = _stepMin + _stepMax - v),
-                () => _cfg.set(
-                    ConfigKeys.scrollStep, _scrollStep.round().toString())),
+            _sliderRow(Icons.speed, 'Pointer speed',
+                value: _pointerGain,
+                min: _gainMin,
+                max: _gainMax,
+                format: (v) => '${v.toStringAsFixed(1)}×',
+                commit: (v) {
+                  setState(() => _pointerGain = v);
+                  _cfg.set(ConfigKeys.pointerGainBase, v.toStringAsFixed(2));
+                }),
+            _sliderRow(Icons.zoom_in, 'Max zoom',
+                value: _maxZoom,
+                min: _zoomMin,
+                max: _zoomMax,
+                format: (v) => '${v.toStringAsFixed(1)}×',
+                commit: (v) {
+                  setState(() => _maxZoom = v);
+                  _cfg.set(ConfigKeys.zoomMax, v.toStringAsFixed(1));
+                }),
+            _sliderRow(Icons.open_in_full, 'Edge auto-pan speed',
+                value: _edgePan,
+                min: _edgePanMin,
+                max: _edgePanMax,
+                format: (v) => v.toStringAsFixed(1),
+                commit: (v) {
+                  setState(() => _edgePan = v);
+                  _cfg.set(ConfigKeys.edgePanSpeed, v.toStringAsFixed(1));
+                }),
+            // Shown slow→fast; internally a smaller px-per-notch is faster.
+            _sliderRow(Icons.swipe_vertical, 'Scroll speed',
+                value: _stepMin + _stepMax - _scrollStep,
+                min: _stepMin,
+                max: _stepMax,
+                format: _percentOf(_stepMin, _stepMax),
+                commit: (v) {
+                  final step = _stepMin + _stepMax - v;
+                  setState(() => _scrollStep = step);
+                  _cfg.set(ConfigKeys.scrollStep, step.round().toString());
+                }),
             _boolRow(Icons.swap_vert, 'Invert scroll direction',
                 ConfigKeys.scrollInvert, _scrollInvert,
                 (v) => _scrollInvert = v),
@@ -441,6 +455,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   widget.core.setLanguage(v); // engine dialogs
                   applyLocale(v); // neodesk's own UI (zh / ja), live
                 })),
+            _sliderRow(Icons.text_fields, 'Font size',
+                value: _fontScale,
+                min: kTextScaleMin,
+                max: kTextScaleMax,
+                format: (v) => '${(v * 100).round()}%',
+                commit: (v) {
+                  setState(() => _fontScale = v);
+                  _cfg.set(ConfigKeys.fontScale, v.toStringAsFixed(2));
+                  applyTextScale(v.toStringAsFixed(2)); // re-scale the UI live
+                }),
             _row(Icons.speed_outlined, 'Quality monitor',
                 value: _labelOf(_qualityDetails, _qualityDetail),
                 onTap: () => _pickOption(
@@ -456,16 +480,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => _pickOption('Key size', _keySizes,
                     ConfigKeys.keySize, _keySize,
                     (v) => setState(() => _keySize = v))),
-            _sliderRow(
-                Icons.opacity,
-                'Panel opacity',
-                '${(_panelOpacity * 100).round()}%',
-                _panelOpacity,
-                _opacityMin,
-                _opacityMax,
-                (v) => setState(() => _panelOpacity = v),
-                () => _cfg.set(ConfigKeys.panelOpacity,
-                    _panelOpacity.toStringAsFixed(2))),
+            _sliderRow(Icons.opacity, 'Panel opacity',
+                value: _panelOpacity,
+                min: _opacityMin,
+                max: _opacityMax,
+                format: (v) => '${(v * 100).round()}%',
+                commit: (v) {
+                  setState(() => _panelOpacity = v);
+                  _cfg.set(ConfigKeys.panelOpacity, v.toStringAsFixed(2));
+                }),
             _boolRow(Icons.view_compact_alt, 'Compact layout (swipe rows)',
                 ConfigKeys.keyCompact, _keyCompact, (v) => _keyCompact = v),
             _boolRow(Icons.width_normal, 'Wide keys (show full labels)',
@@ -614,53 +637,84 @@ class _SettingsPageState extends State<SettingsPage> {
         _cfg.setBool(key, v);
       });
 
-  /// A setting whose slider is hidden until the row is tapped (accordion).
-  Widget _sliderRow(IconData icon, String label, String? valueText,
-      double value, double min, double max,
-      ValueChanged<double> onChanged, VoidCallback onCommit) {
-    final open = _openSlider == label;
-    return Column(
-      children: [
-        ListTile(
-          leading: Icon(icon, color: AppColors.textSecondary),
-          title: Text(tr(label), style: AppTypography.body),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (valueText != null)
-                Text(tr(valueText), style: AppTypography.caption),
-              const SizedBox(width: 4),
-              Icon(open ? Icons.expand_less : Icons.expand_more,
-                  color: AppColors.textDisabled, size: 20),
-            ],
-          ),
-          onTap: () => setState(() => _openSlider = open ? null : label),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 180),
-          crossFadeState:
-              open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: const SizedBox(width: double.infinity, height: 0),
-          secondChild: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: Dimens.s16),
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppColors.accent,
-                thumbColor: AppColors.accent,
-                inactiveTrackColor: AppColors.border,
-              ),
-              child: Slider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                onChanged: onChanged,
-                onChangeEnd: (_) => onCommit(),
-              ),
+  /// A numeric setting edited **in place**: tapping the row turns it into a
+  /// slider with confirm / cancel. Nothing opens, so it carries no chevron —
+  /// only rows that push a page or a sheet do.
+  ///
+  /// The live value is a draft ([_draft]); [commit] runs on the green check and
+  /// the red cross discards it, so dragging never half-applies a setting.
+  Widget _sliderRow(
+    IconData icon,
+    String label, {
+    required double value,
+    required double min,
+    required double max,
+    required String Function(double) format,
+    required ValueChanged<double> commit,
+  }) {
+    if (_editing != label) {
+      return ListTile(
+        leading: Icon(icon, color: AppColors.textSecondary),
+        title: Text(tr(label), style: AppTypography.body),
+        trailing: Text(format(value), style: AppTypography.caption),
+        onTap: () => setState(() {
+          _editing = label;
+          _draft = value.clamp(min, max);
+        }),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Dimens.s16, Dimens.s4, Dimens.s8, 0),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.accent),
+          const SizedBox(width: Dimens.s16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                        child: Text(tr(label), style: AppTypography.body)),
+                    Text(format(_draft),
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.accent)),
+                  ],
+                ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppColors.accent,
+                    thumbColor: AppColors.accent,
+                    inactiveTrackColor: AppColors.border,
+                    trackHeight: 2,
+                  ),
+                  child: Slider(
+                    value: _draft.clamp(min, max),
+                    min: min,
+                    max: max,
+                    onChanged: (v) => setState(() => _draft = v),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          // The palette's accent *is* the green; danger is the red.
+          _editAction(Icons.check, AppColors.accent, () {
+            commit(_draft);
+            setState(() => _editing = null);
+          }),
+          _editAction(Icons.close, AppColors.danger,
+              () => setState(() => _editing = null)),
+        ],
+      ),
     );
   }
+
+  Widget _editAction(IconData icon, Color color, VoidCallback onTap) =>
+      IconButton(
+        icon: Icon(icon, color: color),
+        visualDensity: VisualDensity.compact,
+        onPressed: onTap,
+      );
 }
