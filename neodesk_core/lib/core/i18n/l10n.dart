@@ -88,7 +88,6 @@ const Map<String, String> _zh = {
   'Trigger on first finger up': '第一根手指抬起即触发',
   'Fire the tap the moment a finger lifts': '手指一抬起就执行手势(无需全部离开)',
   'Long-press time': '长按判定时间',
-  'Multi-tap time limit': '多指轻点时限',
   'Two-finger settle': '双指沉降窗口',
   'Drag threshold': '拖动判定距离',
   'Tap tolerance': '轻点容差距离',
@@ -275,8 +274,6 @@ const Map<String, String> _zh = {
   'Hold right button': '长按右键',
   'Hold middle button': '长按中键',
   'Hold left button (drag to select / move)': '长按左键（拖动以选择 / 移动）',
-  'Pan view (cursor when not zoomed)': '平移画面（未缩放时移动光标）',
-  'Pan the view (moves the cursor when not zoomed)': '平移画面（未缩放时移动光标）',
   'Right click at the second finger': '在第二根手指处右键单击',
 };
 
@@ -322,7 +319,6 @@ const Map<String, String> _ja = {
   'Trigger on first finger up': '最初の指が離れたら実行',
   'Fire the tap the moment a finger lifts': '指が離れた瞬間に実行(全指を待たない)',
   'Long-press time': '長押し判定時間',
-  'Multi-tap time limit': '複数指タップの時間上限',
   'Two-finger settle': '2本指の沈降ウィンドウ',
   'Drag threshold': 'ドラッグ判定距離',
   'Tap tolerance': 'タップ許容距離',
@@ -510,8 +506,5 @@ const Map<String, String> _ja = {
   'Hold middle button': '中ボタンを長押し',
   'Hold left button (drag to select / move)':
       '左ボタンを長押し（ドラッグで選択 / 移動）',
-  'Pan view (cursor when not zoomed)': '画面をパン（未拡大時はカーソル移動）',
-  'Pan the view (moves the cursor when not zoomed)':
-      '画面をパン（未拡大時はカーソル移動）',
   'Right click at the second finger': '2 本目の指の位置で右クリック',
 };

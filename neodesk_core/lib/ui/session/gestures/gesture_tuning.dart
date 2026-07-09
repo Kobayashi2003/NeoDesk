@@ -12,7 +12,6 @@ import 'package:neodesk_core/neodesk_core.dart';
 class GestureTuning {
   const GestureTuning({
     this.longPressMs = 500,
-    this.multiTapMs = 250,
     this.settleMs = 80,
     this.dragSlop = 12,
     this.tapSlop = 16,
@@ -22,10 +21,10 @@ class GestureTuning {
 
   /// How long a finger must stay down (without moving past [dragSlop]) to count
   /// as a long-press rather than a tap.
+  ///
+  /// It doubles as the multi-finger tap window: everything before the long press
+  /// would fire is the multi-finger trigger period (see `GestureEngine`).
   final int longPressMs;
-
-  /// Max duration for a multi-finger gesture to still register as a tap.
-  final int multiTapMs;
 
   /// Settle window after a 2-finger gesture begins, during which two-finger
   /// continuous actions are withheld so a 3rd/4th finger can pre-empt them.
@@ -47,12 +46,10 @@ class GestureTuning {
   static const defaults = GestureTuning();
 
   Duration get longPress => Duration(milliseconds: longPressMs);
-  Duration get multiTap => Duration(milliseconds: multiTapMs);
   Duration get settle => Duration(milliseconds: settleMs);
 
   GestureTuning copyWith({
     int? longPressMs,
-    int? multiTapMs,
     int? settleMs,
     double? dragSlop,
     double? tapSlop,
@@ -61,7 +58,6 @@ class GestureTuning {
   }) =>
       GestureTuning(
         longPressMs: longPressMs ?? this.longPressMs,
-        multiTapMs: multiTapMs ?? this.multiTapMs,
         settleMs: settleMs ?? this.settleMs,
         dragSlop: dragSlop ?? this.dragSlop,
         tapSlop: tapSlop ?? this.tapSlop,
@@ -71,7 +67,6 @@ class GestureTuning {
 
   Map<String, dynamic> toJson() => {
         'longPressMs': longPressMs,
-        'multiTapMs': multiTapMs,
         'settleMs': settleMs,
         'dragSlop': dragSlop,
         'tapSlop': tapSlop,
@@ -84,8 +79,7 @@ class GestureTuning {
     int i(String k, int f) => (j[k] as num?)?.round() ?? f;
     return GestureTuning(
       longPressMs: i('longPressMs', 500),
-      multiTapMs: i('multiTapMs', 250),
-      settleMs: i('settleMs', 80),
+      settleMs: i('settleMs', 80), // 'multiTapMs' (pre-1.9.2) is ignored
       dragSlop: d('dragSlop', 12),
       tapSlop: d('tapSlop', 16),
       zoomActivate: d('zoomActivate', 24),

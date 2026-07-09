@@ -256,8 +256,13 @@ class GestureEngine {
 
   /// Emit the tap for the peak finger count, always at the stable [_anchor].
   /// One-finger taps always fire; multi-finger taps must be "clean" (little
-  /// travel/zoom, quick, never classified as a drag). Returns whether a tap was
-  /// emitted.
+  /// travel/zoom, never classified as a drag) and land inside the multi-finger
+  /// window. Returns whether a tap was emitted.
+  ///
+  /// That window runs from the first finger's touch-down until the long-press
+  /// would have fired: everything before the long press *is* the multi-finger
+  /// trigger period. (A second finger cancels the long-press timer, so the two
+  /// can never both happen.) It is deliberately the same rule in both modes.
   bool _fireTap() {
     if (_maxFingers == 1) {
       sink.tap(GestureSlot.oneFingerTap, _anchor);
@@ -267,7 +272,7 @@ class GestureEngine {
     if (_maxFingers > 4) return false;
     final clean = _travel < tuning.tapSlop &&
         _maxZoomDev < 0.08 &&
-        DateTime.now().difference(_downAt) < tuning.multiTap &&
+        DateTime.now().difference(_downAt) < tuning.longPress &&
         _twoKind == TwoFingerKind.undecided;
     if (!clean) return false;
     sink.tap(

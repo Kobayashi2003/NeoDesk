@@ -128,6 +128,39 @@ void main() {
     });
   });
 
+  group('multi-finger window runs until the long press would fire', () {
+    // Everything before the long press is the multi-finger trigger period, so a
+    // slow two-finger tap must still register.
+    GestureEngine slow() => GestureEngine(
+          tuning: const GestureTuning(longPressMs: 200),
+          sink: sink,
+        );
+
+    test('a two-finger tap well past the old 250ms limit still fires',
+        () async {
+      final e = slow();
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(80, 50));
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps.single.$1, GestureSlot.twoFingerTap);
+    });
+
+    test('once the long press would have fired, no tap', () async {
+      final e = slow();
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(80, 50));
+      await Future<void>.delayed(const Duration(milliseconds: 260));
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps, isEmpty);
+      expect(sink.longPresses, isEmpty); // 2nd finger cancelled the timer
+    });
+  });
+
   group('long press', () {
     test('bound to none (ignored) still lets the tap fire on lift', () async {
       final e = engineWith();
@@ -237,6 +270,16 @@ void main() {
           GestureAction.none);
       expect(m.action(InteractionUiMode.touch, GestureSlot.threeFingerTap),
           GestureAction.showToolbar);
+    });
+
+    test('a one-finger drag cannot bind the dead bare panCanvas', () {
+      expect(GestureMap.allowedActions(GestureSlot.oneFingerDrag),
+          isNot(contains(GestureAction.panCanvas)));
+      // A 1.9.1 config that stored it is carried over, not dropped.
+      const raw = '{"_v":2,"pointer":{"oneFingerDrag":"panCanvas"}}';
+      final m = GestureMap.fromJson(raw);
+      expect(m.action(InteractionUiMode.pointer, GestureSlot.oneFingerDrag),
+          GestureAction.panElseCursor);
     });
 
     test('a v1 value the user actually chose survives the migration', () {

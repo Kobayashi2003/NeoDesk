@@ -49,8 +49,10 @@ extension GestureActionX on GestureAction {
         GestureAction.toggleKeyboard => tr('Toggle keyboard'),
         GestureAction.escape => tr('Escape key'),
         GestureAction.moveCursor => tr('Move cursor'),
+        // Both read "Pan view": they never appear in the same picker, and the
+        // cursor fallback is an implementation detail, not a mode to choose.
         GestureAction.panCanvas => tr('Pan view'),
-        GestureAction.panElseCursor => tr('Pan view (cursor when not zoomed)'),
+        GestureAction.panElseCursor => tr('Pan view'),
         GestureAction.zoomCanvas => tr('Zoom view'),
         GestureAction.scrollWheel => tr('Scroll wheel'),
       };
@@ -174,10 +176,11 @@ class GestureMap {
         GestureSlot.threeFingerTap ||
         GestureSlot.fourFingerTap =>
           const [GestureAction.none, ..._discrete],
+        // Pans via [GestureAction.panElseCursor], never bare `panCanvas`: a
+        // one-finger drag must not be a dead gesture at fit scale.
         GestureSlot.oneFingerDrag => const [
             GestureAction.none,
             GestureAction.moveCursor,
-            GestureAction.panCanvas,
             GestureAction.panElseCursor,
             GestureAction.scrollWheel,
           ],
@@ -285,6 +288,12 @@ class GestureMap {
             } else if (_v1Defaults[slot] == action) {
               return; // stale default — keep v2's (mode-specific) one
             }
+          }
+          // 1.9.1 briefly allowed a bare `panCanvas` here, which is a no-op at
+          // fit scale. Carry it over to the fallback-aware action.
+          if (slot == GestureSlot.oneFingerDrag &&
+              action == GestureAction.panCanvas) {
+            action = GestureAction.panElseCursor;
           }
           base.set(mode, slot, action); // illegal bindings are dropped
         });
