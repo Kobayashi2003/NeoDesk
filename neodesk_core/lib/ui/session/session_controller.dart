@@ -167,6 +167,10 @@ class SessionController extends ChangeNotifier {
   Timer? _chromeTimer;
   Timer? _edgePanTimer;
 
+  /// Live finger position + ticker for the hold-drag edge continuation.
+  Timer? _holdEdgeTimer;
+  Offset? _holdFinger;
+
   bool get isConnected => phase == SessionPhase.connected;
 
   double _readDouble(String key, double fallback) =>
@@ -252,6 +256,12 @@ class SessionController extends ChangeNotifier {
       case GestureAction.doubleClick:
         input.tap(MouseButton.left);
         input.tap(MouseButton.left);
+      // Hold actions are press/release pairs driven by the gesture pad's
+      // long-press hold path, not one-shot actions.
+      case GestureAction.holdLeft:
+      case GestureAction.holdRight:
+      case GestureAction.holdMiddle:
+        break;
       case GestureAction.showToolbar:
         setChrome(true); // persistent; dismissed via the toolbar's Hide button
 
@@ -287,8 +297,8 @@ class SessionController extends ChangeNotifier {
   /// Wheel-scroll by [notches] (used by the scroll strip). Positive = down.
   void scrollBy(int notches) => input.scroll(wheelDir(notches));
 
-  /// Toggle the system/ordinary keyboard. The default keyboard action (toolbar
-  /// button, four-finger tap) opens the ordinary keyboard first.
+  /// Toggle the system/ordinary keyboard. The toolbar button opens the ordinary
+  /// keyboard first; a gesture can also be bound to `toggleKeyboard`.
   void toggleKeyboard() {
     systemKeyboard = !systemKeyboard;
     notifyListeners();
@@ -508,25 +518,73 @@ class SessionController extends ChangeNotifier {
     _edgePanTimer = null;
   }
 
+  /// Normalised edge push for a screen point, scaled by [edgePanSpeed] — zero
+  /// unless [p] is inside the [_edgeMargin] band, then proportional to depth.
+  Offset _edgePush(Offset p, CanvasView v) {
+    double ex = 0, ey = 0;
+    if (p.dx < _edgeMargin) {
+      ex = -(_edgeMargin - p.dx) / _edgeMargin;
+    } else if (p.dx > v.vw - _edgeMargin) {
+      ex = (p.dx - (v.vw - _edgeMargin)) / _edgeMargin;
+    }
+    if (p.dy < _edgeMargin) {
+      ey = -(_edgeMargin - p.dy) / _edgeMargin;
+    } else if (p.dy > v.vh - _edgeMargin) {
+      ey = (p.dy - (v.vh - _edgeMargin)) / _edgeMargin;
+    }
+    if (ex == 0 && ey == 0) return Offset.zero;
+    return Offset(ex * edgePanSpeed, ey * edgePanSpeed);
+  }
+
+  // --- Long-press hold-drag edge continuation --------------------------------
+
+  /// A hold-drag (long-press with a button held — i.e. selecting text or
+  /// dragging) runs out of screen before it runs out of content. While the
+  /// finger rests inside the edge band, keep the gesture going as if it were
+  /// still moving. Driven by the **finger**, not the cursor: it is the finger
+  /// that hits the physical edge.
+  void beginHoldDrag(Offset finger) {
+    _holdFinger = finger;
+    _holdEdgeTimer ??= Timer.periodic(_kEdgePanInterval, (_) => _holdEdgeTick());
+  }
+
+  void updateHoldFinger(Offset finger) => _holdFinger = finger;
+
+  void endHoldDrag() {
+    _holdEdgeTimer?.cancel();
+    _holdEdgeTimer = null;
+    _holdFinger = null;
+  }
+
+  void _holdEdgeTick() {
+    final f = _holdFinger;
+    final v = view;
+    if (f == null || !v.isValid) return;
+    final push = _edgePush(f, v);
+    if (push == Offset.zero) return;
+    if (mode == InteractionUiMode.touch) {
+      // Shift the view toward the edge, then re-place the cursor under the
+      // (stationary) finger: it now sits on freshly revealed content, so the
+      // remote cursor advances and the selection extends. Stops on its own once
+      // the canvas hits its clamp — there is nothing left to reveal.
+      panCanvas(-push);
+      cursorTo(f);
+    } else {
+      // Relative mode: keep nudging the cursor outward. The real engine's
+      // CursorModel edge-pans on relative moves; FakeCore clamps at the image
+      // bound.
+      moveCursorBy(push);
+    }
+  }
+
   void _edgePanTick() {
     final v = view;
     if (!v.isValid) return;
     final screen = v.imageToScreen(cursorImage);
-    // Normalised push (-1..1) per axis, proportional to margin depth.
-    double ex = 0, ey = 0;
-    if (screen.dx < _edgeMargin) {
-      ex = -(_edgeMargin - screen.dx) / _edgeMargin;
-    } else if (screen.dx > v.vw - _edgeMargin) {
-      ex = (screen.dx - (v.vw - _edgeMargin)) / _edgeMargin;
-    }
-    if (screen.dy < _edgeMargin) {
-      ey = -(_edgeMargin - screen.dy) / _edgeMargin;
-    } else if (screen.dy > v.vh - _edgeMargin) {
-      ey = (screen.dy - (v.vh - _edgeMargin)) / _edgeMargin;
-    }
-    if (ex == 0 && ey == 0) return;
-    final stepX = (ex * edgePanSpeed) / v.s;
-    final stepY = (ey * edgePanSpeed) / v.s;
+    final push = _edgePush(screen, v);
+    if (push == Offset.zero) return;
+    final stepX = push.dx / v.s;
+    final stepY = push.dy / v.s;
     final old = cursorImage;
     cursorImage = Offset(
       (cursorImage.dx + stepX).clamp(0.0, v.w),
@@ -726,6 +784,7 @@ class SessionController extends ChangeNotifier {
     _switchFitSub?.cancel();
     _chromeTimer?.cancel();
     _edgePanTimer?.cancel();
+    _holdEdgeTimer?.cancel();
     _phaseSub?.cancel();
     _peerSub?.cancel();
     _qualitySub?.cancel();
