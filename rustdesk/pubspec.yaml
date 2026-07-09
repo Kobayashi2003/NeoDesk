@@ -19,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # neodesk app version. Keep in lock-step with
 # neodesk_core/lib/core/version.dart (kNeodeskVersion); bump the +build
 # monotonically so installs never hit an Android version-downgrade.
-version: 1.9.7+145
+version: 1.10.0+146
 
 environment:
   sdk: '^3.1.0'

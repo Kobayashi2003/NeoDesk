@@ -104,6 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _keySize;
   late bool _keyCompact;
   late bool _keyWide;
+  late bool _keyMousePanel;
   late String _volumeUp;
   late String _volumeDown;
   late String _language;
@@ -137,6 +138,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _keySize = _cfg.get(ConfigKeys.keySize, defaultValue: 'medium');
     _keyCompact = _cfg.getBool(ConfigKeys.keyCompact);
     _keyWide = _cfg.getBool(ConfigKeys.keyWide);
+    _keyMousePanel =
+        _cfg.getBool(ConfigKeys.keyMousePanel, defaultValue: true);
     _volumeUp = _cfg.get(ConfigKeys.volumeUp, defaultValue: 'off');
     _volumeDown = _cfg.get(ConfigKeys.volumeDown, defaultValue: 'off');
     _language = _cfg.get(ConfigKeys.language, defaultValue: 'system');
@@ -477,6 +480,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 _keyWide, (v) {
               setState(() => _keyWide = v);
               _cfg.setBool(ConfigKeys.keyWide, v);
+            }),
+            _switchRow(Icons.mouse_outlined, 'Mouse buttons panel',
+                _keyMousePanel, (v) {
+              setState(() => _keyMousePanel = v);
+              _cfg.setBool(ConfigKeys.keyMousePanel, v);
             }),
           ]),
           // Other — app-level behaviour and About.

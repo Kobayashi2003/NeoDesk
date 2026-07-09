@@ -20,6 +20,10 @@ import 'key_combo.dart';
 /// lacks: sticky modifiers, Esc/Tab/Enter/nav/F-keys and shortcut combos. It can
 /// be shown on its own or stacked above the system keyboard.
 ///
+/// **Mouse buttons** ([mouseActive]) — left/middle/right, sharing the Fn panel's
+/// Hold arming so a button can be held down across other input. Its chip is
+/// hidden entirely when [showMouse] is false.
+///
 /// Keys use the engine's `VK_*` names and modifiers are sent as engine flags via
 /// [InputSink.setModifiers] (not as modifier key events) — the only thing the
 /// prebuilt engine actually honours. See DESIGN.md §4.4.
@@ -30,11 +34,14 @@ class RemoteKeyboard extends StatefulWidget {
     required this.systemActive,
     required this.specialActive,
     required this.combosActive,
+    required this.mouseActive,
     required this.onToggleSystem,
     required this.onToggleSpecial,
     required this.onToggleCombos,
+    required this.onToggleMouse,
     required this.onHide,
     required this.combos,
+    this.showMouse = true,
     this.opacity = 0.9,
     this.keySize = 'medium',
     this.compact = false,
@@ -45,10 +52,15 @@ class RemoteKeyboard extends StatefulWidget {
   final bool systemActive;
   final bool specialActive;
   final bool combosActive;
+  final bool mouseActive;
   final VoidCallback onToggleSystem;
   final VoidCallback onToggleSpecial;
   final VoidCallback onToggleCombos;
+  final VoidCallback onToggleMouse;
   final VoidCallback onHide;
+
+  /// Whether to offer the mouse-buttons panel at all (Settings → Interface).
+  final bool showMouse;
 
   /// User-configured shortcut chords (see ComboSettingsPage / [ComboStore]).
   final List<KeyCombo> combos;
@@ -148,11 +160,16 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
 
   @override
   void dispose() {
-    // Release any held keys (clean keyup, press:false) and clear modifier flags
-    // so nothing leaks into gesture clicks once the keyboard closes.
+    // Release anything still held (clean keyup / pointer-up) and clear the
+    // modifier flags, so nothing leaks into gesture clicks once the keyboard
+    // closes — a held mouse button would otherwise stay pressed on the peer.
     for (final t in _held) {
-      final vk = t.startsWith('mod:') ? _modVk[t.substring(4)]! : t;
-      widget.input.key(vk, down: false, press: false);
+      if (t.startsWith(_mousePrefix)) {
+        widget.input.pointerUp(_mouseButtonOf(t));
+      } else {
+        final vk = t.startsWith('mod:') ? _modVk[t.substring(4)]! : t;
+        widget.input.key(vk, down: false, press: false);
+      }
     }
     widget.input.setModifiers(ctrl: false, alt: false, shift: false, meta: false);
     _capture.dispose();
@@ -218,6 +235,31 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
       _applyHeldMods();
     } else {
       widget.input.key(vk, press: true); // momentary tap (held modifiers apply)
+    }
+  }
+
+  /// Held mouse buttons live in [_held] alongside the keys, under this prefix.
+  static const _mousePrefix = 'mouse:';
+
+  static MouseButton _mouseButtonOf(String token) =>
+      MouseButton.values.byName(token.substring(_mousePrefix.length));
+
+  /// Tap of a mouse button, routed through the same Hold state machine as the
+  /// keys: armed → the button goes down and stays down; tap it again to release;
+  /// otherwise it is a momentary click (any held modifiers ride along).
+  void _tapMouse(MouseButton button) {
+    final token = '$_mousePrefix${button.name}';
+    if (_holdArmed) {
+      widget.input.pointerDown(button);
+      setState(() {
+        _held.add(token);
+        _holdArmed = false;
+      });
+    } else if (_held.contains(token)) {
+      widget.input.pointerUp(button);
+      setState(() => _held.remove(token));
+    } else {
+      widget.input.tap(button);
     }
   }
 
@@ -345,6 +387,7 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
           children: [
             if (widget.specialActive) _specialPanel(),
             if (widget.combosActive) _combosPanel(),
+            if (widget.mouseActive && widget.showMouse) _mousePanel(),
             _controlStrip(),
             // Invisible capture for the system keyboard (RustDesk's 0×0 trick).
             SizedBox(
@@ -382,6 +425,11 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
             const SizedBox(width: Dimens.s8),
             _chip(tr('Combos'), widget.onToggleCombos,
                 active: widget.combosActive, icon: Icons.bolt),
+            if (widget.showMouse) ...[
+              const SizedBox(width: Dimens.s8),
+              _chip(tr('Mouse'), widget.onToggleMouse,
+                  active: widget.mouseActive, icon: Icons.mouse_outlined),
+            ],
             const Spacer(),
             _tapButton(Icons.keyboard_hide, widget.onHide),
           ],
@@ -448,6 +496,26 @@ class _RemoteKeyboardState extends State<RemoteKeyboard> {
       _keyRow(fns.sublist(6)),
     ]);
   }
+
+  /// Mouse buttons, with the same Hold arming as the Fn panel: tap Hold, then a
+  /// button, and it stays pressed on the peer until you tap it again.
+  Widget _mousePanel() {
+    final keys = [
+      _button(tr('Hold'), _tapHold, active: _holdArmed),
+      _mouseKey(tr('Left'), MouseButton.left),
+      _mouseKey(tr('Middle'), MouseButton.middle),
+      _mouseKey(tr('Right'), MouseButton.right),
+    ];
+    if (widget.wide) return _wideRow(keys);
+    if (widget.compact) return _scrollRow(keys);
+    return _keyRow(keys);
+  }
+
+  Widget _mouseKey(String label, MouseButton button) => _button(
+        label,
+        () => _tapMouse(button),
+        active: _held.contains('$_mousePrefix${button.name}'),
+      );
 
   /// Standalone shortcut-combos surface (toggled by the Combos chip / toolbar).
   Widget _combosPanel() {

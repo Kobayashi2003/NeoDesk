@@ -247,6 +247,76 @@ void main() {
     });
   });
 
+  group('two-finger long press', () {
+    test('two resting fingers fire it at the second finger', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200));
+      await pastLongPress();
+
+      expect(sink.longPresses, [const Offset(200, 200)]);
+      expect(sink.taps, isEmpty); // the long press consumed the touch
+    });
+
+    test('it holds a button but drags nothing', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200));
+      await pastLongPress();
+
+      // Two fingers: there is no single finger to follow.
+      e.move(1, const Offset(90, 50), const Offset(40, 0));
+      e.move(2, const Offset(240, 200), const Offset(40, 0));
+      expect(sink.holdDrags, isEmpty);
+      expect(sink.continuousSlots, isEmpty);
+
+      e.up(1);
+      expect(sink.holdEnds, 1); // the button is released
+    });
+
+    test('a one-finger hold still drags, and only via its own finger', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(50, 50));
+      await pastLongPress();
+      e.move(1, const Offset(90, 50), const Offset(40, 0));
+
+      expect(sink.holdDrags, [const Offset(90, 50)]);
+    });
+
+    test('moving before the deadline cancels it', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(50, 200));
+      e.down(2, const Offset(120, 200));
+      e.move(1, const Offset(50, 240), const Offset(0, 40)); // past dragSlop
+      await pastLongPress();
+
+      expect(sink.longPresses, isEmpty);
+    });
+
+    test('three resting fingers have no long-press slot', () async {
+      final e = engineWith();
+      sink.outcome = LongPressOutcome.holding;
+      e.down(1, const Offset(10, 10));
+      e.down(2, const Offset(20, 10));
+      e.down(3, const Offset(30, 10));
+      await pastLongPress();
+
+      expect(sink.longPresses, isEmpty);
+    });
+
+    test('defaults to holding the right button', () {
+      final m = GestureMap.defaults();
+      for (final mode in InteractionUiMode.values) {
+        expect(m.action(mode, GestureSlot.twoFingerLongPress),
+            GestureAction.holdRight);
+      }
+    });
+  });
+
   group('cancellation', () {
     test('a cancelled finger poisons the whole sequence', () {
       final e = engineWith();
@@ -328,7 +398,8 @@ void main() {
       e.up(2);
 
       expect(sink.taps, isEmpty);
-      expect(sink.longPresses, isEmpty); // 2nd finger cancelled the timer
+      // The deadline turned the resting touch into a two-finger long press.
+      expect(sink.longPresses, [const Offset(80, 50)]);
     });
   });
 

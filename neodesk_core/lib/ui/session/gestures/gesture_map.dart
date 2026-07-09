@@ -89,6 +89,7 @@ enum GestureSlot {
   oneFingerLongPress,
   oneFingerDrag,
   twoFingerTap,
+  twoFingerLongPress,
   twoFingerDragH,
   twoFingerDragV,
   twoFingerPinch,
@@ -102,6 +103,7 @@ extension GestureSlotX on GestureSlot {
         GestureSlot.oneFingerLongPress => tr('One-finger long press'),
         GestureSlot.oneFingerDrag => tr('One-finger drag'),
         GestureSlot.twoFingerTap => tr('Two-finger tap'),
+        GestureSlot.twoFingerLongPress => tr('Two-finger long press'),
         GestureSlot.twoFingerDragH => tr('Two-finger horizontal drag'),
         GestureSlot.twoFingerDragV => tr('Two-finger vertical drag'),
         GestureSlot.twoFingerPinch => tr('Two-finger pinch'),
@@ -151,7 +153,9 @@ class GestureMap {
   ///    `moveCursor` there would send the cursor to the origin — forbidden;
   ///  * pinch carries `zoom`+`focal` → zoom only.
   static List<GestureAction> allowedActions(GestureSlot slot) => switch (slot) {
-        GestureSlot.oneFingerLongPress => const [
+        GestureSlot.oneFingerLongPress ||
+        GestureSlot.twoFingerLongPress =>
+          const [
             GestureAction.none,
             GestureAction.holdLeft,
             GestureAction.holdRight,
@@ -195,6 +199,8 @@ class GestureMap {
     // Holding the left button *is* "long-press drag" (select / grab / move).
     GestureSlot.oneFingerLongPress: GestureAction.holdLeft,
     GestureSlot.twoFingerTap: GestureAction.rightClick,
+    // Two fingers mirror one: tap clicks, resting holds the same button down.
+    GestureSlot.twoFingerLongPress: GestureAction.holdRight,
     GestureSlot.threeFingerTap: GestureAction.showToolbar,
     GestureSlot.fourFingerTap: GestureAction.none,
     GestureSlot.twoFingerDragV: GestureAction.scrollWheel,

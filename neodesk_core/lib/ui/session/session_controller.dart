@@ -98,8 +98,9 @@ class SessionController extends ChangeNotifier {
   bool systemKeyboard = false;
   bool specialKeyboard = false;
   bool combosKeyboard = false;
+  bool mouseKeyboard = false;
   bool get keyboardVisible =>
-      systemKeyboard || specialKeyboard || combosKeyboard;
+      systemKeyboard || specialKeyboard || combosKeyboard || mouseKeyboard;
 
   /// Demo-only local canvas transform for the placeholder frame. On the real
   /// engine the transform lives in `canvasModel` (read via [view]); this stays
@@ -317,12 +318,19 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Toggle the mouse-buttons panel.
+  void toggleMouseKeyboard() {
+    mouseKeyboard = !mouseKeyboard;
+    notifyListeners();
+  }
+
   /// Dismiss all keyboard surfaces.
   void hideKeyboard() {
     if (!keyboardVisible) return;
     systemKeyboard = false;
     specialKeyboard = false;
     combosKeyboard = false;
+    mouseKeyboard = false;
     notifyListeners();
   }
 

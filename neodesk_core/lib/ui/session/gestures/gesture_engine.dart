@@ -54,9 +54,9 @@ abstract class GestureSink {
 ///  1. the **long-press deadline** ([GestureTuning.longPressMs]) — everything
 ///     before it is the multi-finger trigger period: a finger landing then joins
 ///     the gesture and re-fixes [_anchor], and lifting then fires the tap for
-///     the collected count. It is also the instant a one-finger long press
-///     buzzes; a second finger cancels that timer, so a multi-finger gesture
-///     never buzzes. A finger landing *after* it voids the tap.
+///     the collected count. Still down at the deadline, the touch becomes a long
+///     press of one or two fingers instead. A finger landing *after* it voids
+///     the tap.
 ///  2. the **settle window** ([GestureTuning.settleMs]), a shorter one —
 ///     two-finger continuous actions are withheld while it is open, so a 3rd or
 ///     4th finger arriving a beat later can still pre-empt a scroll or pinch.
@@ -82,6 +82,10 @@ class GestureEngine {
   bool _consumed = false; // a tap already fired (early-tap guards re-fire)
   bool _lateFinger = false; // landed after the long-press deadline
   bool _cancelled = false; // a pointer was cancelled: the sequence is void
+
+  /// The finger a held long-press follows, or null when the hold began with more
+  /// than one finger (then it holds the button but drags nothing).
+  int? _holdPointer;
   Timer? _lpTimer;
 
   // Two-finger state.
@@ -108,10 +112,13 @@ class GestureEngine {
       _lpTimer = Timer(tuning.longPress, _onLongPress);
       sink.gestureStart();
     } else {
-      _lpTimer?.cancel();
+      // The timer keeps running: it fires for whatever finger count is down at
+      // the deadline, so a resting two-finger touch becomes a two-finger long
+      // press. A *held* one, though, has already resolved — end it.
       if (_holding) {
         sink.holdEnd(); // a held long-press escalated to multi-finger
         _holding = false;
+        _holdPointer = null;
       }
       _twoKind = TwoFingerKind.undecided;
       if (_accepting) {
@@ -136,7 +143,7 @@ class GestureEngine {
     }
 
     if (_holding) {
-      sink.holdDrag(pos, delta); // a hold only ever has one finger
+      if (id == _holdPointer) sink.holdDrag(pos, delta);
       return;
     }
     // One gesture per touch sequence. Once a tap has fired — which with
@@ -174,6 +181,7 @@ class GestureEngine {
     if (_holding) {
       sink.holdEnd(); // else the peer's mouse button stays pressed
       _holding = false;
+      _holdPointer = null;
     }
   }
 
@@ -197,8 +205,14 @@ class GestureEngine {
   bool get _settling => _elapsed < tuning.settle && _accepting;
 
   void _onLongPress() {
-    if (_fingers.length != 1 || _moved || _holding) return;
-    switch (sink.longPress(GestureSlot.oneFingerLongPress, _anchor)) {
+    if (_moved || _holding) return;
+    final slot = switch (_fingers.length) {
+      1 => GestureSlot.oneFingerLongPress,
+      2 => GestureSlot.twoFingerLongPress,
+      _ => null, // 3+ fingers have no long-press slot
+    };
+    if (slot == null) return;
+    switch (sink.longPress(slot, _anchor)) {
       case LongPressOutcome.ignored:
         break; // bound to `none` — leave the touch alone so the tap still fires
       case LongPressOutcome.fired:
@@ -206,6 +220,9 @@ class GestureEngine {
       case LongPressOutcome.holding:
         _lpFired = true;
         _holding = true;
+        // Only a one-finger hold drags: with two fingers down there is no single
+        // finger to follow, and each would emit its own move.
+        _holdPointer = _fingers.length == 1 ? _fingers.keys.first : null;
     }
   }
 
@@ -260,6 +277,7 @@ class GestureEngine {
     if (_holding) {
       sink.holdEnd();
       _holding = false;
+      _holdPointer = null;
     }
 
     final allUp = _fingers.isEmpty;
@@ -327,6 +345,7 @@ class GestureEngine {
     _consumed = false;
     _lateFinger = false;
     _cancelled = false;
+    _holdPointer = null;
     _twoKind = TwoFingerKind.undecided;
     _travel = 0;
     _maxZoomDev = 0;

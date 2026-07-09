@@ -57,6 +57,10 @@ abstract final class ConfigKeys {
   /// rows so long labels aren't clipped (bool).
   static const keyWide = 'neodesk.kbd.wide';
 
+  /// Offer the mouse-buttons panel (its chip in the keyboard's control strip).
+  /// Defaults to on. (bool)
+  static const keyMousePanel = 'neodesk.kbd.mousepanel';
+
   /// What each phone volume key does during a session — an action token (`off`,
   /// `scrollUp`/`scrollDown`, `left`/`right`, a modifier `ctrl`/`alt`/`shift`/
   /// `meta`, or a `VK_*` key). When not `off` the key is consumed (no system

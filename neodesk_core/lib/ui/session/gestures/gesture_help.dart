@@ -30,6 +30,11 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       result: 'Right click at the second finger'
     ),
     (
+      icon: Icons.ads_click,
+      gesture: 'Two-finger long press',
+      result: 'Hold right button'
+    ),
+    (
       icon: Icons.unfold_more,
       gesture: 'Two-finger vertical drag',
       result: 'Scroll wheel'
@@ -55,6 +60,11 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       result: 'Hold left button (drag to select / move)'
     ),
     (icon: Icons.back_hand, gesture: 'Two-finger tap', result: 'Right click'),
+    (
+      icon: Icons.ads_click,
+      gesture: 'Two-finger long press',
+      result: 'Hold right button'
+    ),
     (
       icon: Icons.swap_horiz,
       gesture: 'Two-finger horizontal drag',
