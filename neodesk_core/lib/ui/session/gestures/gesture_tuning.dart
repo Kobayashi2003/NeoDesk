@@ -12,7 +12,7 @@ import 'package:neodesk_core/neodesk_core.dart';
 class GestureTuning {
   const GestureTuning({
     this.longPressMs = 500,
-    this.settleMs = 80,
+    this.collectMs = 150,
     this.dragSlop = 12,
     this.tapSlop = 16,
     this.zoomActivate = 24,
@@ -26,9 +26,14 @@ class GestureTuning {
   /// would fire is the multi-finger trigger period (see `GestureEngine`).
   final int longPressMs;
 
-  /// Settle window after a 2-finger gesture begins, during which two-finger
-  /// continuous actions are withheld so a 3rd/4th finger can pre-empt them.
-  final int settleMs;
+  /// How long after the *first* touch the gesture keeps collecting fingers.
+  ///
+  /// This is the moment the gesture's finger count is decided. Until it closes,
+  /// a newly landed finger joins the gesture and re-fixes its trigger position;
+  /// after it, the count is frozen and a late finger cancels the tap. Two-finger
+  /// continuous actions (scroll/pinch/pan) are withheld for the same window, so
+  /// a 3rd or 4th finger arriving a beat later can still pre-empt them.
+  final int collectMs;
 
   /// Movement (px) before a touch counts as a drag (and cancels the long-press).
   final double dragSlop;
@@ -46,11 +51,11 @@ class GestureTuning {
   static const defaults = GestureTuning();
 
   Duration get longPress => Duration(milliseconds: longPressMs);
-  Duration get settle => Duration(milliseconds: settleMs);
+  Duration get collect => Duration(milliseconds: collectMs);
 
   GestureTuning copyWith({
     int? longPressMs,
-    int? settleMs,
+    int? collectMs,
     double? dragSlop,
     double? tapSlop,
     double? zoomActivate,
@@ -58,7 +63,7 @@ class GestureTuning {
   }) =>
       GestureTuning(
         longPressMs: longPressMs ?? this.longPressMs,
-        settleMs: settleMs ?? this.settleMs,
+        collectMs: collectMs ?? this.collectMs,
         dragSlop: dragSlop ?? this.dragSlop,
         tapSlop: tapSlop ?? this.tapSlop,
         zoomActivate: zoomActivate ?? this.zoomActivate,
@@ -67,7 +72,7 @@ class GestureTuning {
 
   Map<String, dynamic> toJson() => {
         'longPressMs': longPressMs,
-        'settleMs': settleMs,
+        'collectMs': collectMs,
         'dragSlop': dragSlop,
         'tapSlop': tapSlop,
         'zoomActivate': zoomActivate,
@@ -79,7 +84,9 @@ class GestureTuning {
     int i(String k, int f) => (j[k] as num?)?.round() ?? f;
     return GestureTuning(
       longPressMs: i('longPressMs', 500),
-      settleMs: i('settleMs', 80), // 'multiTapMs' (pre-1.9.2) is ignored
+      // Pre-1.9.3 'settleMs' (and pre-1.9.2 'multiTapMs') are ignored: the
+      // collection window subsumes the settle and has a different scale.
+      collectMs: i('collectMs', 150),
       dragSlop: d('dragSlop', 12),
       tapSlop: d('tapSlop', 16),
       zoomActivate: d('zoomActivate', 24),

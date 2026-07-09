@@ -81,7 +81,7 @@ class _SessionSink extends GestureSink {
   @override
   void tap(GestureSlot slot, Offset at) {
     final action = _action(slot);
-    _placeCursor(action, at); // every positional tap, not just the one-finger one
+    _placeCursor(action, at);
     _c.performGesture(action);
   }
 
@@ -130,8 +130,8 @@ class _SessionSink extends GestureSink {
       case GestureAction.panCanvas:
         _c.transformCanvas(pan: delta);
       case GestureAction.panElseCursor:
-        // Nothing to reveal at fit scale, where a pan is pinned by clampOffset —
-        // move the cursor instead, so the drag is never a dead gesture.
+        // A pan is pinned by clampOffset at fit scale, so it would be a dead
+        // gesture there — move the cursor instead.
         if (_c.canPan) {
           _c.transformCanvas(pan: delta);
         } else {

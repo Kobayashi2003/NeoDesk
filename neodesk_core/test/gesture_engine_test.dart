@@ -128,6 +128,67 @@ void main() {
     });
   });
 
+  group('finger-collection window', () {
+    GestureEngine collecting() => GestureEngine(
+          tuning: const GestureTuning(longPressMs: 500, collectMs: 60),
+          sink: sink,
+        );
+
+    test('a finger landing after the window cancels the tap', () async {
+      final e = collecting();
+      e.down(1, const Offset(50, 50));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      e.down(2, const Offset(200, 200)); // too late to be collected
+      e.up(1);
+      e.up(2);
+
+      // Neither a two-finger tap (not collected) nor a one-finger one.
+      expect(sink.taps, isEmpty);
+    });
+
+    test('a finger landing inside the window is collected', () async {
+      final e = collecting();
+      e.down(1, const Offset(50, 50));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      e.down(2, const Offset(200, 200));
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps.single.$1, GestureSlot.twoFingerTap);
+      expect(sink.taps.single.$2, const Offset(200, 200));
+    });
+  });
+
+  group('multi-finger taps tolerate fingers rolling as they land', () {
+    test('a finger past dragSlop no longer vetoes a two-finger tap', () {
+      final e = engineWith();
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200));
+      // 20px > dragSlop (12): _moved is set, but the centroid barely moves and
+      // nothing gets classified as a drag.
+      e.move(2, const Offset(220, 200), const Offset(20, 0));
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps.single.$1, GestureSlot.twoFingerTap);
+    });
+
+    test('a real two-finger swipe still does not fire a tap', () {
+      final e = engineWith();
+      e.down(1, const Offset(50, 200));
+      e.down(2, const Offset(120, 200));
+      // Both fingers travel together, far past tapSlop — a swipe, not a tap.
+      for (var i = 1; i <= 10; i++) {
+        e.move(1, Offset(50, 200 + 12.0 * i), const Offset(0, 12));
+        e.move(2, Offset(120, 200 + 12.0 * i), const Offset(0, 12));
+      }
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps, isEmpty);
+    });
+  });
+
   group('multi-finger window runs until the long press would fire', () {
     // Everything before the long press is the multi-finger trigger period, so a
     // slow two-finger tap must still register.

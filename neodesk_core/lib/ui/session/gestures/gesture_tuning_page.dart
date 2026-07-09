@@ -56,11 +56,11 @@ class _GestureTuningPageState extends State<GestureTuningPage> {
                 _switch('Trigger on first finger up',
                     'Fire the tap the moment a finger lifts', _t.earlyTap,
                     (v) => _update(_t.copyWith(earlyTap: v))),
-                // Also bounds the multi-finger tap window — see GestureEngine.
+                // Also the deadline for a multi-finger tap — see GestureEngine.
                 _intRow('Long-press time', _t.longPressMs, 200, 1000, 'ms',
                     (v) => _update(_t.copyWith(longPressMs: v))),
-                _intRow('Two-finger settle', _t.settleMs, 0, 200, 'ms',
-                    (v) => _update(_t.copyWith(settleMs: v))),
+                _intRow('Finger collection window', _t.collectMs, 60, 300, 'ms',
+                    (v) => _update(_t.copyWith(collectMs: v))),
                 _dblRow('Drag threshold', _t.dragSlop, 4, 30, 'px',
                     (v) => _update(_t.copyWith(dragSlop: v))),
                 _dblRow('Tap tolerance', _t.tapSlop, 8, 40, 'px',

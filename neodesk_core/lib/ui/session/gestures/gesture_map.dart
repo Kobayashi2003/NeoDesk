@@ -143,8 +143,9 @@ class GestureMap {
   GestureAction action(InteractionUiMode mode, GestureSlot slot) =>
       _m[mode]?[slot] ?? GestureAction.none;
 
+  /// Illegal bindings are ignored — see [allowedActions].
   void set(InteractionUiMode mode, GestureSlot slot, GestureAction a) {
-    if (!allowedActions(slot).contains(a)) return; // pinch is fixed; see below
+    if (!allowedActions(slot).contains(a)) return;
     (_m[mode] ??= {})[slot] = a;
   }
 
@@ -215,11 +216,10 @@ class GestureMap {
   };
 
   /// Where the modes genuinely differ. Touch is absolute, so a one-finger drag
-  /// pans the view like a photo viewer (the cursor is placed by tapping, and
-  /// long-press-drag selects) — falling back to moving the cursor while there is
-  /// nothing to pan, which leaves the horizontal two-finger drag with nothing to
-  /// do. Pointer is a relative trackpad, so a one-finger drag *is* the cursor,
-  /// and panning falls to the two-finger drag.
+  /// pans the view (the cursor is placed by tapping, long-press-drag selects),
+  /// leaving the horizontal two-finger drag with nothing to do. Pointer is a
+  /// relative trackpad, so a one-finger drag *is* the cursor, and panning falls
+  /// to the two-finger drag.
   static GestureMap defaults() => GestureMap({
         InteractionUiMode.touch: {
           ..._shared,
@@ -254,15 +254,30 @@ class GestureMap {
     return jsonEncode(out);
   }
 
-  /// Pre-v2 a *click* action on the long-press slot actually held the button
-  /// (the drag was implicit). Preserve that feel rather than silently demoting
-  /// those users to a plain click.
-  static GestureAction _migrateLongPress(GestureAction a) => switch (a) {
-        GestureAction.leftClick => GestureAction.holdLeft,
-        GestureAction.rightClick => GestureAction.holdRight,
-        GestureAction.middleClick => GestureAction.holdMiddle,
-        _ => a,
-      };
+  /// Bring one persisted binding up to the current schema. Returns null when the
+  /// stored value should be dropped in favour of the current default.
+  static GestureAction? _normalise(
+      int version, GestureSlot slot, GestureAction action) {
+    if (version < _schema) {
+      // Pre-v2 a *click* on the long-press slot actually held the button (the
+      // drag was implicit); don't silently demote those users to a plain click.
+      if (slot == GestureSlot.oneFingerLongPress) {
+        return switch (action) {
+          GestureAction.leftClick => GestureAction.holdLeft,
+          GestureAction.rightClick => GestureAction.holdRight,
+          GestureAction.middleClick => GestureAction.holdMiddle,
+          _ => action,
+        };
+      }
+      if (_v1Defaults[slot] == action) return null;
+    }
+    // 1.9.1 briefly allowed a bare `panCanvas` here, a no-op at fit scale.
+    if (slot == GestureSlot.oneFingerDrag &&
+        action == GestureAction.panCanvas) {
+      return GestureAction.panElseCursor;
+    }
+    return action;
+  }
 
   static GestureMap fromJson(String? raw) {
     if (raw == null || raw.isEmpty) return defaults();
@@ -278,24 +293,12 @@ class GestureMap {
         (slots as Map<String, dynamic>).forEach((slotName, actionName) {
           final slot =
               GestureSlot.values.where((s) => s.name == slotName).firstOrNull;
-          var action = GestureAction.values
+          final stored = GestureAction.values
               .where((a) => a.name == actionName)
               .firstOrNull;
-          if (slot == null || action == null) return;
-          if (version < _schema) {
-            if (slot == GestureSlot.oneFingerLongPress) {
-              action = _migrateLongPress(action);
-            } else if (_v1Defaults[slot] == action) {
-              return; // stale default — keep v2's (mode-specific) one
-            }
-          }
-          // 1.9.1 briefly allowed a bare `panCanvas` here, which is a no-op at
-          // fit scale. Carry it over to the fallback-aware action.
-          if (slot == GestureSlot.oneFingerDrag &&
-              action == GestureAction.panCanvas) {
-            action = GestureAction.panElseCursor;
-          }
-          base.set(mode, slot, action); // illegal bindings are dropped
+          if (slot == null || stored == null) return;
+          final action = _normalise(version, slot, stored);
+          if (action != null) base.set(mode, slot, action);
         });
       });
       return base;

@@ -573,16 +573,14 @@ class SessionController extends ChangeNotifier {
     final push = _edgePush(f, v);
     if (push == Offset.zero) return;
     if (mode == InteractionUiMode.touch) {
-      // Shift the view toward the edge, then re-place the cursor under the
-      // (stationary) finger: it now sits on freshly revealed content, so the
-      // remote cursor advances and the selection extends. Stops on its own once
-      // the canvas hits its clamp — there is nothing left to reveal.
+      // Shift the view, then re-place the cursor under the stationary finger: it
+      // now sits on freshly revealed content, so the selection extends. Stops on
+      // its own once the canvas hits its clamp.
       panCanvas(-push);
       cursorTo(f);
     } else {
-      // Relative mode: keep nudging the cursor outward. The real engine's
-      // CursorModel edge-pans on relative moves; FakeCore clamps at the image
-      // bound.
+      // The real engine's CursorModel edge-pans on relative moves; FakeCore
+      // clamps at the image bound.
       moveCursorBy(push);
     }
   }
