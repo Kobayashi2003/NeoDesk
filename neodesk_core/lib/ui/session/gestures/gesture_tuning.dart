@@ -16,8 +16,11 @@ class GestureTuning {
     this.dragSlop = 12,
     this.tapSlop = 16,
     this.zoomActivate = 24,
-    this.earlyTap = false,
+    this.earlyTap = true,
   });
+
+  /// Schema version of the persisted JSON. v2 flipped [earlyTap] on by default.
+  static const _schema = 2;
 
   /// How long a finger must stay down (without moving past [dragSlop]) to count
   /// as a long-press rather than a tap.
@@ -44,8 +47,9 @@ class GestureTuning {
   /// Finger-spread change (px) that counts as a real pinch/zoom.
   final double zoomActivate;
 
-  /// Fire the tap as soon as the *first* finger lifts (the gesture is already
-  /// decided by then), instead of waiting for every finger to leave the screen.
+  /// Fire the tap as soon as the *first* finger lifts, instead of waiting for
+  /// every finger to leave the screen. The gesture is fully decided by then: the
+  /// collection window has fixed the finger count and the anchor.
   final bool earlyTap;
 
   static const defaults = GestureTuning();
@@ -71,6 +75,7 @@ class GestureTuning {
       );
 
   Map<String, dynamic> toJson() => {
+        '_v': _schema,
         'longPressMs': longPressMs,
         'collectMs': collectMs,
         'dragSlop': dragSlop,
@@ -82,6 +87,7 @@ class GestureTuning {
   static GestureTuning fromJson(Map<String, dynamic> j) {
     double d(String k, double f) => (j[k] as num?)?.toDouble() ?? f;
     int i(String k, int f) => (j[k] as num?)?.round() ?? f;
+    final version = (j['_v'] as num?)?.toInt() ?? 1;
     return GestureTuning(
       longPressMs: i('longPressMs', 500),
       // Pre-1.9.3 'settleMs' (and pre-1.9.2 'multiTapMs') are ignored: the
@@ -90,7 +96,9 @@ class GestureTuning {
       dragSlop: d('dragSlop', 12),
       tapSlop: d('tapSlop', 16),
       zoomActivate: d('zoomActivate', 24),
-      earlyTap: j['earlyTap'] == true,
+      // The page saves the whole record on any edit, so a pre-v2 `false` is
+      // indistinguishable from the old default — take v2's instead.
+      earlyTap: version < _schema || j['earlyTap'] == true,
     );
   }
 }

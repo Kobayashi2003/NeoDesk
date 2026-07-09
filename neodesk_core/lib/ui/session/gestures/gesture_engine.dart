@@ -134,13 +134,18 @@ class GestureEngine {
       _lpTimer?.cancel();
     }
 
+    if (_holding) {
+      sink.holdDrag(pos, delta); // a hold only ever has one finger
+      return;
+    }
+    // One gesture per touch sequence. Once a tap has fired — which with
+    // `earlyTap` happens while later fingers are still down — or a discrete
+    // long-press has, no residual finger may drive anything else.
+    if (_consumed || _lpFired) return;
+
     switch (_fingers.length) {
       case 1:
-        if (_holding) {
-          sink.holdDrag(pos, delta);
-        } else if (_lpFired || _consumed || _maxFingers > 1) {
-          return; // one gesture per sequence: no residual-finger drag
-        } else if (_moved) {
+        if (_maxFingers == 1 && _moved) {
           sink.continuous(GestureSlot.oneFingerDrag, delta: delta, absPos: pos);
         }
       case 2:

@@ -189,6 +189,40 @@ void main() {
     });
   });
 
+  group('early tap', () {
+    test('is on by default, and survives a pre-v2 stored `false`', () {
+      expect(GestureTuning.defaults.earlyTap, isTrue);
+      expect(
+          GestureTuning.fromJson(const {'longPressMs': 500, 'earlyTap': false})
+              .earlyTap,
+          isTrue);
+      // An explicit v2 opt-out is honoured.
+      expect(
+          GestureTuning.fromJson(const {'_v': 2, 'earlyTap': false}).earlyTap,
+          isFalse);
+    });
+
+    test('the fingers left down after an early tap drive nothing', () async {
+      final e = GestureEngine(
+        tuning: const GestureTuning(
+            longPressMs: 500, collectMs: 20, earlyTap: true),
+        sink: sink,
+      );
+      e.down(1, const Offset(100, 200));
+      e.down(2, const Offset(160, 200));
+      e.down(3, const Offset(220, 200));
+      // Leave the collection window, so two fingers would otherwise classify.
+      await Future<void>.delayed(const Duration(milliseconds: 45));
+      e.up(1); // three-finger tap fires here; 2 and 3 are still down
+
+      e.move(2, const Offset(160, 300), const Offset(0, 100));
+      e.move(3, const Offset(220, 300), const Offset(0, 100));
+
+      expect(sink.taps.single.$1, GestureSlot.threeFingerTap);
+      expect(sink.continuousSlots, isEmpty); // no stray scroll/pinch
+    });
+  });
+
   group('multi-finger window runs until the long press would fire', () {
     // Everything before the long press is the multi-finger trigger period, so a
     // slow two-finger tap must still register.
