@@ -22,8 +22,9 @@ abstract class GestureSink {
 
   /// A discrete tap of [slot] (one/two/three/fourFingerTap).
   ///
-  /// [at] is the gesture's **anchor**: the screen point where the *first* finger
-  /// landed. It is deliberately not the lift point — with multiple fingers, and
+  /// [at] is the gesture's **anchor**: where the finger that *completed* the
+  /// gesture landed (the 2nd finger of a two-finger tap, the 3rd of a three…).
+  /// It is deliberately not the lift point — with multiple fingers, and
   /// especially with `earlyTap`, which finger lifts first is arbitrary, so a
   /// lift-derived point makes Touch mode click somewhere unpredictable.
   void tap(GestureSlot slot, Offset at);
@@ -68,8 +69,12 @@ class GestureEngine {
   final Map<int, _Finger> _fingers = {};
   int _maxFingers = 0;
 
-  /// Where the first finger of this touch sequence landed — the gesture's
-  /// anchor, and the only positionally *stable* point a multi-finger gesture has.
+  /// Where the most recently landed finger touched down — the gesture's anchor.
+  ///
+  /// The *last* finger, not the first: the finger that completes a two-finger
+  /// tap is the one the user is aiming with (the first is already resting), and
+  /// it is fixed the moment that finger lands, so it is independent of lift
+  /// order and of `earlyTap`.
   Offset _anchor = Offset.zero;
   DateTime _downAt = DateTime.now();
   bool _moved = false;
@@ -94,12 +99,14 @@ class GestureEngine {
   void down(int id, Offset pos) {
     _fingers[id] = _Finger(pos);
     if (_fingers.length > _maxFingers) _maxFingers = _fingers.length;
+    // Every new finger re-anchors: a two-finger tap acts where the *second*
+    // finger landed, a three-finger tap where the third did, and so on.
+    _anchor = pos;
 
     if (_fingers.length == 1) {
       _moved = false;
       _lpFired = false;
       _consumed = false;
-      _anchor = pos;
       _downAt = DateTime.now();
       _travel = 0;
       _maxZoomDev = 0;

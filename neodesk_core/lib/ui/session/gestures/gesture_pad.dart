@@ -126,17 +126,17 @@ class _SessionSink extends GestureSink {
       Offset focal = Offset.zero}) {
     switch (_action(slot)) {
       case GestureAction.moveCursor:
-        if (_touch) {
-          _c.cursorTo(absPos);
-        } else {
-          if (!_dragArmed) {
-            _dragArmed = true;
-            _c.beginPointerDrag(); // edge auto-pan (FakeCore only)
-          }
-          _c.moveCursorBy(delta);
-        }
+        _dragCursor(absPos, delta);
       case GestureAction.panCanvas:
         _c.transformCanvas(pan: delta);
+      case GestureAction.panElseCursor:
+        // Nothing to reveal at fit scale, where a pan is pinned by clampOffset —
+        // move the cursor instead, so the drag is never a dead gesture.
+        if (_c.canPan) {
+          _c.transformCanvas(pan: delta);
+        } else {
+          _dragCursor(absPos, delta);
+        }
       case GestureAction.zoomCanvas:
         _c.transformCanvas(zoom: zoom, focal: focal);
       case GestureAction.scrollWheel:
@@ -144,6 +144,20 @@ class _SessionSink extends GestureSink {
       default:
         break;
     }
+  }
+
+  /// Drag the cursor: absolutely in Touch mode, relatively (with edge auto-pan)
+  /// in Pointer mode.
+  void _dragCursor(Offset absPos, Offset delta) {
+    if (_touch) {
+      _c.cursorTo(absPos);
+      return;
+    }
+    if (!_dragArmed) {
+      _dragArmed = true;
+      _c.beginPointerDrag(); // edge auto-pan (FakeCore only)
+    }
+    _c.moveCursorBy(delta);
   }
 
   @override

@@ -275,6 +275,9 @@ const Map<String, String> _zh = {
   'Hold right button': '长按右键',
   'Hold middle button': '长按中键',
   'Hold left button (drag to select / move)': '长按左键（拖动以选择 / 移动）',
+  'Pan view (cursor when not zoomed)': '平移画面（未缩放时移动光标）',
+  'Pan the view (moves the cursor when not zoomed)': '平移画面（未缩放时移动光标）',
+  'Right click at the second finger': '在第二根手指处右键单击',
 };
 
 const Map<String, String> _ja = {
@@ -507,4 +510,8 @@ const Map<String, String> _ja = {
   'Hold middle button': '中ボタンを長押し',
   'Hold left button (drag to select / move)':
       '左ボタンを長押し（ドラッグで選択 / 移動）',
+  'Pan view (cursor when not zoomed)': '画面をパン（未拡大時はカーソル移動）',
+  'Pan the view (moves the cursor when not zoomed)':
+      '画面をパン（未拡大時はカーソル移動）',
+  'Right click at the second finger': '2 本目の指の位置で右クリック',
 };

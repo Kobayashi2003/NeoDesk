@@ -67,16 +67,28 @@ void main() {
       expect(sink.taps.single.$2, const Offset(100, 100));
     });
 
-    test('two-finger tap anchors on the first finger regardless of lift order',
+    test('two-finger tap anchors on the second finger, whatever lifts first',
         () {
       final e = engineWith(earlyTap: true);
-      e.down(1, const Offset(50, 50)); // first contact == anchor
-      e.down(2, const Offset(200, 200));
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200)); // completing finger == anchor
       e.up(2); // the *second* finger lifts first
 
       expect(sink.taps, hasLength(1));
       expect(sink.taps.single.$1, GestureSlot.twoFingerTap);
-      expect(sink.taps.single.$2, const Offset(50, 50));
+      expect(sink.taps.single.$2, const Offset(200, 200));
+    });
+
+    test('the anchor is fixed when the finger lands, not where it drifts to',
+        () {
+      final e = engineWith();
+      e.down(1, const Offset(50, 50));
+      e.down(2, const Offset(200, 200));
+      e.move(2, const Offset(206, 206), const Offset(6, 6)); // under dragSlop
+      e.up(1);
+      e.up(2);
+
+      expect(sink.taps.single.$2, const Offset(200, 200));
     });
 
     test('long press reports the anchor', () async {
@@ -90,7 +102,7 @@ void main() {
   });
 
   group('tap slot selection', () {
-    test('three fingers fire the three-finger tap', () {
+    test('three fingers fire the three-finger tap at the third finger', () {
       final e = engineWith();
       e.down(1, const Offset(10, 10));
       e.down(2, const Offset(20, 10));
@@ -100,6 +112,7 @@ void main() {
       e.up(3);
 
       expect(sink.taps.single.$1, GestureSlot.threeFingerTap);
+      expect(sink.taps.single.$2, const Offset(30, 10));
     });
 
     test('five fingers are a palm, not a four-finger tap', () {
@@ -198,7 +211,7 @@ void main() {
     test('mode defaults differ where the modes genuinely differ', () {
       final m = GestureMap.defaults();
       expect(m.action(InteractionUiMode.touch, GestureSlot.oneFingerDrag),
-          GestureAction.panCanvas);
+          GestureAction.panElseCursor);
       expect(m.action(InteractionUiMode.pointer, GestureSlot.oneFingerDrag),
           GestureAction.moveCursor);
       expect(m.action(InteractionUiMode.touch, GestureSlot.twoFingerDragH),
@@ -210,6 +223,30 @@ void main() {
       final m = GestureMap.fromJson(raw);
       expect(m.action(InteractionUiMode.touch, GestureSlot.oneFingerLongPress),
           GestureAction.holdLeft);
+    });
+
+    test('a v1 value that is just the old default yields to the v2 default', () {
+      // The whole map was written out whenever the user edited any one row, so
+      // these carry no intent — they must not pin the old behaviour forever.
+      const raw = '{"touch":{"oneFingerDrag":"moveCursor",'
+          '"twoFingerDragH":"panCanvas","threeFingerTap":"none"}}';
+      final m = GestureMap.fromJson(raw);
+      expect(m.action(InteractionUiMode.touch, GestureSlot.oneFingerDrag),
+          GestureAction.panElseCursor);
+      expect(m.action(InteractionUiMode.touch, GestureSlot.twoFingerDragH),
+          GestureAction.none);
+      expect(m.action(InteractionUiMode.touch, GestureSlot.threeFingerTap),
+          GestureAction.showToolbar);
+    });
+
+    test('a v1 value the user actually chose survives the migration', () {
+      const raw = '{"touch":{"oneFingerDrag":"scrollWheel",'
+          '"threeFingerTap":"escape"}}';
+      final m = GestureMap.fromJson(raw);
+      expect(m.action(InteractionUiMode.touch, GestureSlot.oneFingerDrag),
+          GestureAction.scrollWheel);
+      expect(m.action(InteractionUiMode.touch, GestureSlot.threeFingerTap),
+          GestureAction.escape);
     });
 
     test('v2 configs keep an explicit long-press click', () {

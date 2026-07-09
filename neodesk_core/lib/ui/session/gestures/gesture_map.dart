@@ -27,6 +27,10 @@ enum GestureAction {
   // Continuous (applied per frame while a drag/pinch is in progress).
   moveCursor,
   panCanvas,
+  /// Pan the view, but fall back to moving the cursor while the image already
+  /// fits the viewport — at fit scale `clampOffset` pins the offset, so a plain
+  /// `panCanvas` would be a silent no-op.
+  panElseCursor,
   zoomCanvas,
   scrollWheel,
 }
@@ -46,6 +50,7 @@ extension GestureActionX on GestureAction {
         GestureAction.escape => tr('Escape key'),
         GestureAction.moveCursor => tr('Move cursor'),
         GestureAction.panCanvas => tr('Pan view'),
+        GestureAction.panElseCursor => tr('Pan view (cursor when not zoomed)'),
         GestureAction.zoomCanvas => tr('Zoom view'),
         GestureAction.scrollWheel => tr('Scroll wheel'),
       };
@@ -173,6 +178,7 @@ class GestureMap {
             GestureAction.none,
             GestureAction.moveCursor,
             GestureAction.panCanvas,
+            GestureAction.panElseCursor,
             GestureAction.scrollWheel,
           ],
         GestureSlot.twoFingerDragH || GestureSlot.twoFingerDragV => const [
@@ -207,13 +213,14 @@ class GestureMap {
 
   /// Where the modes genuinely differ. Touch is absolute, so a one-finger drag
   /// pans the view like a photo viewer (the cursor is placed by tapping, and
-  /// long-press-drag selects) — which leaves the horizontal two-finger drag with
-  /// nothing to do. Pointer is a relative trackpad, so a one-finger drag *is*
-  /// the cursor, and panning falls to the two-finger drag.
+  /// long-press-drag selects) — falling back to moving the cursor while there is
+  /// nothing to pan, which leaves the horizontal two-finger drag with nothing to
+  /// do. Pointer is a relative trackpad, so a one-finger drag *is* the cursor,
+  /// and panning falls to the two-finger drag.
   static GestureMap defaults() => GestureMap({
         InteractionUiMode.touch: {
           ..._shared,
-          GestureSlot.oneFingerDrag: GestureAction.panCanvas,
+          GestureSlot.oneFingerDrag: GestureAction.panElseCursor,
           GestureSlot.twoFingerDragH: GestureAction.none,
         },
         InteractionUiMode.pointer: {
@@ -222,6 +229,17 @@ class GestureMap {
           GestureSlot.twoFingerDragH: GestureAction.panCanvas,
         },
       });
+
+  /// The v1 defaults for the slots whose *default* changed in v2. A stored v1
+  /// value equal to one of these was never chosen by the user — it is just the
+  /// old default — so it must give way to the new one, or upgraders silently
+  /// keep the old behaviour forever. A value that differs was a real choice and
+  /// is preserved.
+  static const _v1Defaults = {
+    GestureSlot.oneFingerDrag: GestureAction.moveCursor,
+    GestureSlot.twoFingerDragH: GestureAction.panCanvas,
+    GestureSlot.threeFingerTap: GestureAction.none,
+  };
 
   String toJson() {
     final out = <String, dynamic>{'_v': _schema};
@@ -261,8 +279,12 @@ class GestureMap {
               .where((a) => a.name == actionName)
               .firstOrNull;
           if (slot == null || action == null) return;
-          if (version < _schema && slot == GestureSlot.oneFingerLongPress) {
-            action = _migrateLongPress(action);
+          if (version < _schema) {
+            if (slot == GestureSlot.oneFingerLongPress) {
+              action = _migrateLongPress(action);
+            } else if (_v1Defaults[slot] == action) {
+              return; // stale default — keep v2's (mode-specific) one
+            }
           }
           base.set(mode, slot, action); // illegal bindings are dropped
         });

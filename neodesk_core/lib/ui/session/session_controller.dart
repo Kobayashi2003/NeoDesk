@@ -272,6 +272,7 @@ class SessionController extends ChangeNotifier {
       // Continuous actions are applied per-frame by the gesture pads, not here.
       case GestureAction.moveCursor:
       case GestureAction.panCanvas:
+      case GestureAction.panElseCursor:
       case GestureAction.zoomCanvas:
       case GestureAction.scrollWheel:
         break;
@@ -469,6 +470,15 @@ class SessionController extends ChangeNotifier {
   }
 
   void panCanvas(Offset delta) => transformCanvas(pan: delta);
+
+  /// Whether the image overflows the viewport on either axis — i.e. whether
+  /// there is anything a pan could reveal. At fit scale `CanvasView.clampOffset`
+  /// pins the offset to the centred value, so a pan there does nothing at all.
+  bool get canPan {
+    final v = view;
+    if (!v.isValid) return false;
+    return v.w * v.s > v.vw + 0.5 || v.h * v.s > v.vh + 0.5;
+  }
 
   /// Toolbar "Fit": a true reset of the view — zoom the whole image back to fit
   /// the viewport AND recentre it (clears any pan).

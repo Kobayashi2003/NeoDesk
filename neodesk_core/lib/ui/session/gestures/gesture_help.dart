@@ -18,13 +18,21 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       gesture: 'One-finger tap',
       result: 'Left click at point'
     ),
-    (icon: Icons.swipe, gesture: 'One-finger drag', result: 'Pan the view'),
+    (
+      icon: Icons.swipe,
+      gesture: 'One-finger drag',
+      result: 'Pan the view (moves the cursor when not zoomed)'
+    ),
     (
       icon: Icons.ads_click,
       gesture: 'One-finger long press',
       result: 'Hold left button (drag to select / move)'
     ),
-    (icon: Icons.back_hand, gesture: 'Two-finger tap', result: 'Right click'),
+    (
+      icon: Icons.back_hand,
+      gesture: 'Two-finger tap',
+      result: 'Right click at the second finger'
+    ),
     (
       icon: Icons.unfold_more,
       gesture: 'Two-finger vertical drag',
