@@ -59,12 +59,18 @@ class _SessionSink extends GestureSink {
   bool get _touch => _c.mode == InteractionUiMode.touch;
   GestureAction _action(GestureSlot s) => _c.gestureMap.action(_c.mode, s);
 
-  MouseButton? _buttonOf(GestureAction a) => switch (a) {
-        GestureAction.leftClick => MouseButton.left,
-        GestureAction.rightClick => MouseButton.right,
-        GestureAction.middleClick => MouseButton.middle,
+  MouseButton? _holdButtonOf(GestureAction a) => switch (a) {
+        GestureAction.holdLeft => MouseButton.left,
+        GestureAction.holdRight => MouseButton.right,
+        GestureAction.holdMiddle => MouseButton.middle,
         _ => null,
       };
+
+  /// Touch mode is absolute, so a positional action must first place the cursor
+  /// at the gesture's anchor. Pointer mode acts wherever the cursor already is.
+  void _placeCursor(GestureAction action, Offset anchor) {
+    if (_touch && action.isPositional) _c.cursorTo(anchor);
+  }
 
   @override
   void gestureStart() {
@@ -74,28 +80,31 @@ class _SessionSink extends GestureSink {
 
   @override
   void tap(GestureSlot slot, Offset at) {
-    // Touch mode's one-finger tap clicks *at the point* touched.
-    if (_touch && slot == GestureSlot.oneFingerTap) _c.cursorTo(at);
-    _c.performGesture(_action(slot));
+    final action = _action(slot);
+    _placeCursor(action, at); // every positional tap, not just the one-finger one
+    _c.performGesture(action);
   }
 
   @override
-  bool longPress(GestureSlot slot, Offset at) {
-    if (_touch) _c.cursorTo(at);
+  LongPressOutcome longPress(GestureSlot slot, Offset at) {
     final action = _action(slot);
-    final button = _buttonOf(action);
+    if (action == GestureAction.none) return LongPressOutcome.ignored;
+    _placeCursor(action, at);
     HapticFeedback.selectionClick();
+    final button = _holdButtonOf(action);
     if (button != null) {
       _heldButton = button;
       _c.input.pointerDown(button); // grab: held while dragging, released on lift
-      return true;
+      _c.beginHoldDrag(at); // keep going if the finger reaches a screen edge
+      return LongPressOutcome.holding;
     }
     _c.performGesture(action);
-    return false;
+    return LongPressOutcome.fired;
   }
 
   @override
   void holdDrag(Offset absPos, Offset delta) {
+    _c.updateHoldFinger(absPos);
     if (_touch) {
       _c.cursorTo(absPos);
     } else {
@@ -104,7 +113,10 @@ class _SessionSink extends GestureSink {
   }
 
   @override
-  void holdEnd() => _c.input.pointerUp(_heldButton);
+  void holdEnd() {
+    _c.endHoldDrag();
+    _c.input.pointerUp(_heldButton);
+  }
 
   @override
   void continuous(GestureSlot slot,

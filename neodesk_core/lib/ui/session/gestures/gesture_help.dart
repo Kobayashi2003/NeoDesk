@@ -8,6 +8,9 @@ import 'interaction_ui_mode.dart';
 
 typedef _Row = ({IconData icon, String gesture, String result});
 
+/// Documents the *default* bindings of each mode. "Long-press drag" is not a
+/// separate gesture — it is what the long-press slot's `hold*` action does, so
+/// it appears as one row.
 const Map<InteractionUiMode, List<_Row>> _help = {
   InteractionUiMode.touch: [
     (
@@ -15,29 +18,20 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       gesture: 'One-finger tap',
       result: 'Left click at point'
     ),
-    (icon: Icons.touch_app, gesture: 'Double tap', result: 'Double click'),
-    (icon: Icons.swipe, gesture: 'One-finger drag', result: 'Move cursor'),
+    (icon: Icons.swipe, gesture: 'One-finger drag', result: 'Pan the view'),
     (
       icon: Icons.ads_click,
-      gesture: 'Long press, then drag',
-      result: 'Left-button drag (select / move)'
+      gesture: 'One-finger long press',
+      result: 'Hold left button (drag to select / move)'
     ),
-    (
-      icon: Icons.swap_horiz,
-      gesture: 'Two-finger horizontal drag',
-      result: 'Pan the view'
-    ),
+    (icon: Icons.back_hand, gesture: 'Two-finger tap', result: 'Right click'),
     (
       icon: Icons.unfold_more,
       gesture: 'Two-finger vertical drag',
       result: 'Scroll wheel'
     ),
     (icon: Icons.pinch, gesture: 'Two-finger pinch', result: 'Zoom view'),
-    (
-      icon: Icons.menu,
-      gesture: 'Three-finger tap',
-      result: 'Custom (Settings → gestures)'
-    ),
+    (icon: Icons.menu, gesture: 'Three-finger tap', result: 'Show toolbar'),
     (
       icon: Icons.keyboard,
       gesture: 'Four-finger tap',
@@ -51,11 +45,10 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       result: 'Move cursor (auto-pan at edges)'
     ),
     (icon: Icons.touch_app, gesture: 'One-finger tap', result: 'Left click'),
-    (icon: Icons.touch_app, gesture: 'Double tap', result: 'Double click'),
     (
       icon: Icons.ads_click,
-      gesture: 'Long press, then drag',
-      result: 'Grab: hold left to drag / select'
+      gesture: 'One-finger long press',
+      result: 'Hold left button (drag to select / move)'
     ),
     (icon: Icons.back_hand, gesture: 'Two-finger tap', result: 'Right click'),
     (
@@ -69,11 +62,7 @@ const Map<InteractionUiMode, List<_Row>> _help = {
       result: 'Scroll wheel'
     ),
     (icon: Icons.pinch, gesture: 'Two-finger pinch', result: 'Zoom view'),
-    (
-      icon: Icons.menu,
-      gesture: 'Three-finger tap',
-      result: 'Custom (Settings → gestures)'
-    ),
+    (icon: Icons.menu, gesture: 'Three-finger tap', result: 'Show toolbar'),
     (
       icon: Icons.keyboard,
       gesture: 'Four-finger tap',

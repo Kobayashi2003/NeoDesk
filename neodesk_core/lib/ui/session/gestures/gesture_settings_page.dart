@@ -49,11 +49,9 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
                 padding: const EdgeInsets.all(Dimens.s16),
                 child: Text(slot.label, style: AppTypography.title),
               ),
-              ...GestureAction.values
-                  .where((a) =>
-                      a == GestureAction.none ||
-                      a.isContinuous == slot.isContinuous)
-                  .map((a) {
+              // Legality is decided by the geometry the slot delivers, not just
+              // discrete-vs-continuous. See [GestureMap.allowedActions].
+              ...GestureMap.allowedActions(slot).map((a) {
               final selected = _map.action(mode, slot) == a;
               return ListTile(
                 leading: Icon(

@@ -5,9 +5,9 @@ import 'package:neodesk_core/neodesk_core.dart' show tr;
 
 import 'interaction_ui_mode.dart';
 
-/// What a discrete gesture does. Click-type outcomes go to the peer as mouse
-/// buttons; the rest are UI/session actions. Movement, scroll and zoom are
-/// mode-defined and not remappable. See DESIGN.md §4.
+/// What a gesture does. Click-type outcomes go to the peer as mouse buttons; the
+/// rest are UI/session actions. Zoom is produced only by the pinch slot and is
+/// **not** remappable (see [GestureMap.editableSlots]). See DESIGN.md §4.
 enum GestureAction {
   // Discrete (fired once on a tap / long-press).
   none,
@@ -15,6 +15,12 @@ enum GestureAction {
   rightClick,
   middleClick,
   doubleClick,
+  // Hold variants — only meaningful on a long-press slot: the button goes down
+  // on trigger, the finger drags with it, and it releases on lift. This is what
+  // "long-press drag" (select / grab / move) is; there is no separate slot.
+  holdLeft,
+  holdRight,
+  holdMiddle,
   showToolbar,
   toggleKeyboard,
   escape,
@@ -32,6 +38,9 @@ extension GestureActionX on GestureAction {
         GestureAction.rightClick => tr('Right click'),
         GestureAction.middleClick => tr('Middle click'),
         GestureAction.doubleClick => tr('Double click'),
+        GestureAction.holdLeft => tr('Hold left button'),
+        GestureAction.holdRight => tr('Hold right button'),
+        GestureAction.holdMiddle => tr('Hold middle button'),
         GestureAction.showToolbar => tr('Show toolbar'),
         GestureAction.toggleKeyboard => tr('Toggle keyboard'),
         GestureAction.escape => tr('Escape key'),
@@ -43,6 +52,28 @@ extension GestureActionX on GestureAction {
 
   /// Continuous actions are applied each frame of a drag/pinch.
   bool get isContinuous => index >= GestureAction.moveCursor.index;
+
+  /// Presses a button on trigger and releases it on lift (drag while held).
+  bool get isHold => switch (this) {
+        GestureAction.holdLeft ||
+        GestureAction.holdRight ||
+        GestureAction.holdMiddle =>
+          true,
+        _ => false,
+      };
+
+  /// Acts *at a point*, so Touch mode must place the cursor before firing it.
+  /// UI actions (toolbar/keyboard/escape) have no position.
+  bool get isPositional =>
+      isHold ||
+      switch (this) {
+        GestureAction.leftClick ||
+        GestureAction.rightClick ||
+        GestureAction.middleClick ||
+        GestureAction.doubleClick =>
+          true,
+        _ => false,
+      };
 }
 
 /// The remappable gesture triggers — the same set in both modes (a binding may be
@@ -96,40 +127,104 @@ class GestureMap {
 
   static const storageKey = 'neodesk.gesturemap';
 
+  /// Schema version of the persisted JSON. v2 renamed the long-press button
+  /// bindings to the explicit `hold*` actions — see [_migrateLongPress].
+  static const _schema = 2;
+
   final Map<InteractionUiMode, Map<GestureSlot, GestureAction>> _m;
 
   GestureAction action(InteractionUiMode mode, GestureSlot slot) =>
       _m[mode]?[slot] ?? GestureAction.none;
 
   void set(InteractionUiMode mode, GestureSlot slot, GestureAction a) {
+    if (!allowedActions(slot).contains(a)) return; // pinch is fixed; see below
     (_m[mode] ??= {})[slot] = a;
   }
 
-  /// Remappable slots — the same unified set for both modes.
-  static List<GestureSlot> get editableSlots => GestureSlot.values;
+  /// Remappable slots. [GestureSlot.twoFingerPinch] is excluded: it is the only
+  /// slot that delivers `zoom`+`focal` rather than a `delta`, so binding it to
+  /// anything but [GestureAction.zoomCanvas] silently does nothing.
+  static List<GestureSlot> get editableSlots =>
+      GestureSlot.values.where((s) => s != GestureSlot.twoFingerPinch).toList();
 
-  /// Defaults shared by both modes (continuous + the unified discrete bindings).
-  /// Three- and four-finger taps default to `none`.
+  /// Which actions a slot may legally take. Determined by the **geometry the
+  /// slot delivers**, not by taste:
+  ///  * tap slots carry a point → discrete actions;
+  ///  * only a long-press can hold a button → `hold*` on that slot alone;
+  ///  * [GestureSlot.oneFingerDrag] carries `delta` *and* `absPos`, so it can
+  ///    drive [GestureAction.moveCursor];
+  ///  * the two-finger drags carry only a centroid `delta` (no `absPos`), so
+  ///    `moveCursor` there would send the cursor to the origin — forbidden;
+  ///  * pinch carries `zoom`+`focal` → zoom only.
+  static List<GestureAction> allowedActions(GestureSlot slot) => switch (slot) {
+        GestureSlot.oneFingerLongPress => const [
+            GestureAction.none,
+            GestureAction.holdLeft,
+            GestureAction.holdRight,
+            GestureAction.holdMiddle,
+            ..._discrete,
+          ],
+        GestureSlot.oneFingerTap ||
+        GestureSlot.twoFingerTap ||
+        GestureSlot.threeFingerTap ||
+        GestureSlot.fourFingerTap =>
+          const [GestureAction.none, ..._discrete],
+        GestureSlot.oneFingerDrag => const [
+            GestureAction.none,
+            GestureAction.moveCursor,
+            GestureAction.panCanvas,
+            GestureAction.scrollWheel,
+          ],
+        GestureSlot.twoFingerDragH || GestureSlot.twoFingerDragV => const [
+            GestureAction.none,
+            GestureAction.panCanvas,
+            GestureAction.scrollWheel,
+          ],
+        GestureSlot.twoFingerPinch => const [GestureAction.zoomCanvas],
+      };
+
+  static const _discrete = [
+    GestureAction.leftClick,
+    GestureAction.rightClick,
+    GestureAction.middleClick,
+    GestureAction.doubleClick,
+    GestureAction.showToolbar,
+    GestureAction.toggleKeyboard,
+    GestureAction.escape,
+  ];
+
+  /// Bindings shared by both modes.
   static const _shared = {
     GestureSlot.oneFingerTap: GestureAction.leftClick,
-    // Long-press then drag holds the left button (drag/select/grab).
-    GestureSlot.oneFingerLongPress: GestureAction.leftClick,
+    // Holding the left button *is* "long-press drag" (select / grab / move).
+    GestureSlot.oneFingerLongPress: GestureAction.holdLeft,
     GestureSlot.twoFingerTap: GestureAction.rightClick,
-    GestureSlot.threeFingerTap: GestureAction.none,
+    GestureSlot.threeFingerTap: GestureAction.showToolbar,
     GestureSlot.fourFingerTap: GestureAction.none,
-    GestureSlot.oneFingerDrag: GestureAction.moveCursor,
-    GestureSlot.twoFingerDragH: GestureAction.panCanvas,
     GestureSlot.twoFingerDragV: GestureAction.scrollWheel,
     GestureSlot.twoFingerPinch: GestureAction.zoomCanvas,
   };
 
+  /// Where the modes genuinely differ. Touch is absolute, so a one-finger drag
+  /// pans the view like a photo viewer (the cursor is placed by tapping, and
+  /// long-press-drag selects) — which leaves the horizontal two-finger drag with
+  /// nothing to do. Pointer is a relative trackpad, so a one-finger drag *is*
+  /// the cursor, and panning falls to the two-finger drag.
   static GestureMap defaults() => GestureMap({
-        InteractionUiMode.touch: {..._shared},
-        InteractionUiMode.pointer: {..._shared},
+        InteractionUiMode.touch: {
+          ..._shared,
+          GestureSlot.oneFingerDrag: GestureAction.panCanvas,
+          GestureSlot.twoFingerDragH: GestureAction.none,
+        },
+        InteractionUiMode.pointer: {
+          ..._shared,
+          GestureSlot.oneFingerDrag: GestureAction.moveCursor,
+          GestureSlot.twoFingerDragH: GestureAction.panCanvas,
+        },
       });
 
   String toJson() {
-    final out = <String, dynamic>{};
+    final out = <String, dynamic>{'_v': _schema};
     _m.forEach((mode, slots) {
       out[mode.name] = {
         for (final e in slots.entries) e.key.name: e.value.name,
@@ -138,23 +233,38 @@ class GestureMap {
     return jsonEncode(out);
   }
 
+  /// Pre-v2 a *click* action on the long-press slot actually held the button
+  /// (the drag was implicit). Preserve that feel rather than silently demoting
+  /// those users to a plain click.
+  static GestureAction _migrateLongPress(GestureAction a) => switch (a) {
+        GestureAction.leftClick => GestureAction.holdLeft,
+        GestureAction.rightClick => GestureAction.holdRight,
+        GestureAction.middleClick => GestureAction.holdMiddle,
+        _ => a,
+      };
+
   static GestureMap fromJson(String? raw) {
     if (raw == null || raw.isEmpty) return defaults();
     try {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final version = (decoded['_v'] as num?)?.toInt() ?? 1;
       final base = defaults();
       decoded.forEach((modeName, slots) {
         final mode = InteractionUiMode.values
             .where((m) => m.name == modeName)
             .firstOrNull;
-        if (mode == null) return;
+        if (mode == null) return; // skips '_v'
         (slots as Map<String, dynamic>).forEach((slotName, actionName) {
           final slot =
               GestureSlot.values.where((s) => s.name == slotName).firstOrNull;
-          final action = GestureAction.values
+          var action = GestureAction.values
               .where((a) => a.name == actionName)
               .firstOrNull;
-          if (slot != null && action != null) base.set(mode, slot, action);
+          if (slot == null || action == null) return;
+          if (version < _schema && slot == GestureSlot.oneFingerLongPress) {
+            action = _migrateLongPress(action);
+          }
+          base.set(mode, slot, action); // illegal bindings are dropped
         });
       });
       return base;

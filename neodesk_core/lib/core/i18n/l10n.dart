@@ -270,6 +270,11 @@ const Map<String, String> _zh = {
   'Escape key': 'Esc 键',
   'Pan view': '平移画面',
   'One-finger long press': '单指长按',
+  // Long-press hold actions (the drag is implicit).
+  'Hold left button': '长按左键',
+  'Hold right button': '长按右键',
+  'Hold middle button': '长按中键',
+  'Hold left button (drag to select / move)': '长按左键（拖动以选择 / 移动）',
 };
 
 const Map<String, String> _ja = {
@@ -496,4 +501,10 @@ const Map<String, String> _ja = {
   'Escape key': 'Esc キー',
   'Pan view': '画面をパン',
   'One-finger long press': '1 本指の長押し',
+  // Long-press hold actions (the drag is implicit).
+  'Hold left button': '左ボタンを長押し',
+  'Hold right button': '右ボタンを長押し',
+  'Hold middle button': '中ボタンを長押し',
+  'Hold left button (drag to select / move)':
+      '左ボタンを長押し（ドラッグで選択 / 移動）',
 };

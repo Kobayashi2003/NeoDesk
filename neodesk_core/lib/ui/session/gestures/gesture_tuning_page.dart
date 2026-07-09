@@ -224,9 +224,10 @@ class _TestSink extends GestureSink {
   void tap(GestureSlot slot, Offset at) => report(slot.label);
 
   @override
-  bool longPress(GestureSlot slot, Offset at) {
+  LongPressOutcome longPress(GestureSlot slot, Offset at) {
     report(tr('Long press'));
-    return true; // let the hold path run so a following drag shows too
+    // Let the hold path run so a following drag shows up too.
+    return LongPressOutcome.holding;
   }
 
   @override

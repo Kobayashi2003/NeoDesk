@@ -11,16 +11,27 @@ import 'gesture_tuning.dart';
 /// real session that's cursor/click/scroll via the controller (mode-aware), in
 /// the settings test area it's just a readout. This split lets both reuse the
 /// exact same recognition logic. See DESIGN.md §4.2.
+/// What the sink did with a long-press, which decides whether the gesture is
+/// consumed. [ignored] (the slot is bound to `none`) leaves the touch untouched,
+/// so lifting still fires the ordinary tap.
+enum LongPressOutcome { ignored, fired, holding }
+
 abstract class GestureSink {
   /// The first finger of a gesture touched down.
   void gestureStart() {}
 
-  /// A discrete tap of [slot] (one/two/three/fourFingerTap) at screen point [at].
+  /// A discrete tap of [slot] (one/two/three/fourFingerTap).
+  ///
+  /// [at] is the gesture's **anchor**: the screen point where the *first* finger
+  /// landed. It is deliberately not the lift point — with multiple fingers, and
+  /// especially with `earlyTap`, which finger lifts first is arbitrary, so a
+  /// lift-derived point makes Touch mode click somewhere unpredictable.
   void tap(GestureSlot slot, Offset at);
 
-  /// The one-finger long-press [slot] fired at [at]. Return true if it began a
-  /// *held* button — then moves come via [holdDrag] and the lift via [holdEnd].
-  bool longPress(GestureSlot slot, Offset at);
+  /// The one-finger long-press [slot] fired at the anchor [at]. Return
+  /// [LongPressOutcome.holding] to begin a *held* button — then moves come via
+  /// [holdDrag] and the lift via [holdEnd].
+  LongPressOutcome longPress(GestureSlot slot, Offset at);
 
   /// While a long-press hold is active, the finger moved to [absPos] (by [delta]).
   void holdDrag(Offset absPos, Offset delta) {}
@@ -56,6 +67,10 @@ class GestureEngine {
 
   final Map<int, _Finger> _fingers = {};
   int _maxFingers = 0;
+
+  /// Where the first finger of this touch sequence landed — the gesture's
+  /// anchor, and the only positionally *stable* point a multi-finger gesture has.
+  Offset _anchor = Offset.zero;
   DateTime _downAt = DateTime.now();
   bool _moved = false;
   bool _lpFired = false;
@@ -84,6 +99,7 @@ class GestureEngine {
       _moved = false;
       _lpFired = false;
       _consumed = false;
+      _anchor = pos;
       _downAt = DateTime.now();
       _travel = 0;
       _maxZoomDev = 0;
@@ -115,8 +131,11 @@ class GestureEngine {
       case 1:
         if (_holding) {
           sink.holdDrag(pos, delta);
-        } else if (_lpFired) {
-          return; // long-press did a discrete action; ignore the rest
+        } else if (_lpFired || _consumed || _maxFingers > 1) {
+          // One gesture per touch sequence: a fired long-press or an already
+          // consumed multi-finger tap must not let a residual finger drag the
+          // cursor away.
+          return;
         } else if (_moved) {
           sink.continuous(GestureSlot.oneFingerDrag, delta: delta, absPos: pos);
         }
@@ -139,9 +158,15 @@ class GestureEngine {
 
   void _onLongPress() {
     if (_fingers.length != 1 || _moved || _holding) return;
-    _lpFired = true;
-    final pos = _fingers.values.first.pos;
-    if (sink.longPress(GestureSlot.oneFingerLongPress, pos)) _holding = true;
+    switch (sink.longPress(GestureSlot.oneFingerLongPress, _anchor)) {
+      case LongPressOutcome.ignored:
+        break; // bound to `none` — leave the touch alone so the tap still fires
+      case LongPressOutcome.fired:
+        _lpFired = true;
+      case LongPressOutcome.holding:
+        _lpFired = true;
+        _holding = true;
+    }
   }
 
   void _handleTwoFinger() {
@@ -192,7 +217,6 @@ class GestureEngine {
   }
 
   void _end(int id, {required bool clickable}) {
-    final ended = _fingers[id];
     final wasHold = _holding;
     final wasLp = _lpFired;
     _fingers.remove(id);
@@ -211,7 +235,7 @@ class GestureEngine {
         !wasHold &&
         !wasLp &&
         (tuning.earlyTap || allUp)) {
-      if (_fireTap(ended)) _consumed = true;
+      if (_fireTap()) _consumed = true;
     }
 
     if (!allUp) {
@@ -223,27 +247,30 @@ class GestureEngine {
     _reset();
   }
 
-  /// Emit the tap for the peak finger count. One-finger taps always fire; multi-
-  /// finger taps must be "clean" (little travel/zoom, quick, never classified as a
-  /// drag). Returns whether a tap was emitted.
-  bool _fireTap(_Finger? ended) {
-    final at = ended?.pos ?? ended?.down ?? Offset.zero;
+  /// Emit the tap for the peak finger count, always at the stable [_anchor].
+  /// One-finger taps always fire; multi-finger taps must be "clean" (little
+  /// travel/zoom, quick, never classified as a drag). Returns whether a tap was
+  /// emitted.
+  bool _fireTap() {
     if (_maxFingers == 1) {
-      sink.tap(GestureSlot.oneFingerTap, at);
+      sink.tap(GestureSlot.oneFingerTap, _anchor);
       return true;
     }
+    // 5+ fingers is a palm, not a gesture — don't fold it into the 4-finger tap.
+    if (_maxFingers > 4) return false;
     final clean = _travel < tuning.tapSlop &&
         _maxZoomDev < 0.08 &&
         DateTime.now().difference(_downAt) < tuning.multiTap &&
         _twoKind == TwoFingerKind.undecided;
     if (!clean) return false;
-    if (_maxFingers == 2) {
-      sink.tap(GestureSlot.twoFingerTap, at);
-    } else if (_maxFingers == 3) {
-      sink.tap(GestureSlot.threeFingerTap, at);
-    } else {
-      sink.tap(GestureSlot.fourFingerTap, at);
-    }
+    sink.tap(
+      switch (_maxFingers) {
+        2 => GestureSlot.twoFingerTap,
+        3 => GestureSlot.threeFingerTap,
+        _ => GestureSlot.fourFingerTap,
+      },
+      _anchor,
+    );
     return true;
   }
 
@@ -260,6 +287,7 @@ class GestureEngine {
 
   void _reset() {
     _maxFingers = 0;
+    _anchor = Offset.zero;
     _moved = false;
     _lpFired = false;
     _consumed = false;
