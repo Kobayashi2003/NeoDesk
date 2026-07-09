@@ -634,6 +634,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _switchRow(IconData icon, String label, bool value,
           ValueChanged<bool> onChanged) =>
       ListTile(
+        // Tighter on the right: the scaled-down switch already leaves slack
+        // inside its own (unscaled) box.
+        contentPadding:
+            const EdgeInsets.only(left: Dimens.pageInset, right: Dimens.s8),
         leading: Icon(icon, color: AppColors.textSecondary),
         title: Text(tr(label), style: AppTypography.body),
         // Scaled down to sit at roughly the leading icon's 24px, so the row

@@ -61,8 +61,13 @@ abstract final class ConfigKeys {
   /// its toolbar button). Defaults to on. (bool)
   static const keyMousePanel = 'neodesk.kbd.mousepanel';
 
-  /// Text-size multiplier for neodesk's own UI (decimal string, 0.8–1.4).
-  static const fontScale = 'neodesk.fontscale';
+  /// Text-size multiplier for neodesk's own UI (decimal string, 0.8–1.6).
+  ///
+  /// Deliberately not the 1.11.0 key `neodesk.fontscale`: 1.11.2 took the base
+  /// type scale down a fifth, so a multiplier stored against the old baseline
+  /// would compound (an old 80% would render at 64%). Starting from a fresh key
+  /// means everyone lands on the new normal size.
+  static const fontScale = 'neodesk.fontscale.v2';
 
   /// What each phone volume key does during a session — an action token (`off`,
   /// `scrollUp`/`scrollDown`, `left`/`right`, a modifier `ctrl`/`alt`/`shift`/

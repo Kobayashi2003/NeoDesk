@@ -7,8 +7,10 @@ import 'app_colors.dart';
 /// changes. Mirrors the `appBrightness` / `appLocale` reactive pattern.
 final ValueNotifier<double> appTextScale = ValueNotifier(1.0);
 
-/// Bounds for the Font size setting; 1.0 is the platform default.
-const double kTextScaleMin = 0.8, kTextScaleMax = 1.4;
+/// Bounds for the Font size setting; 1.0 is the normal size. The ceiling is
+/// above 1.4 because the base scale itself came down a fifth in 1.11.2 — this
+/// keeps the same headroom for anyone who wants larger text.
+const double kTextScaleMin = 0.8, kTextScaleMax = 1.6;
 
 /// Apply a stored Font-size setting (a decimal string) to the live UI.
 void applyTextScale(String setting) => appTextScale.value =
@@ -24,6 +26,13 @@ class AppTypography {
 
   static const String? fontFamily = null;
 
+  /// The whole scale was taken down a fifth in 1.11.2: what used to need the
+  /// Font-size setting at 80% is now simply the normal size. Kept as a factor on
+  /// the original numbers so the ratios between the steps stay visible.
+  ///
+  /// The Font-size setting ([appTextScale]) multiplies on top of this.
+  static const _sizeScale = 0.8;
+
   // Colour-bearing styles follow the active brightness via [AppColors], but are
   // memoised per brightness so accessing them in list builders doesn't allocate a
   // new TextStyle every frame — they're only rebuilt when the theme flips. The
@@ -35,26 +44,26 @@ class AppTypography {
     if (_cachedFor == appBrightness.value) return;
     _cachedFor = appBrightness.value;
     _display = const TextStyle(
-      fontSize: 28,
+      fontSize: 28 * _sizeScale,
       fontWeight: FontWeight.w800,
       letterSpacing: -0.5,
       height: 1.1,
     ).copyWith(color: AppColors.textPrimary);
     _title = const TextStyle(
-      fontSize: 20,
+      fontSize: 20 * _sizeScale,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.2,
     ).copyWith(color: AppColors.textPrimary);
     _body = const TextStyle(
-      fontSize: 15,
+      fontSize: 15 * _sizeScale,
       fontWeight: FontWeight.w500,
     ).copyWith(color: AppColors.textPrimary);
     _caption = const TextStyle(
-      fontSize: 13,
+      fontSize: 13 * _sizeScale,
       fontWeight: FontWeight.w400,
     ).copyWith(color: AppColors.textSecondary);
     _mono = const TextStyle(
-      fontSize: 14,
+      fontSize: 14 * _sizeScale,
       fontWeight: FontWeight.w500,
       fontFeatures: [FontFeature.tabularFigures()],
       letterSpacing: 1.0,
@@ -82,7 +91,7 @@ class AppTypography {
   }
 
   static const button = TextStyle(
-    fontSize: 15,
+    fontSize: 15 * _sizeScale,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.2,
   );
