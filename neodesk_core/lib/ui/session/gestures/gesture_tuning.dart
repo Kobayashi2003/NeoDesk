@@ -12,15 +12,16 @@ import 'package:neodesk_core/neodesk_core.dart';
 class GestureTuning {
   const GestureTuning({
     this.longPressMs = 500,
-    this.collectMs = 150,
+    this.settleMs = 150,
     this.dragSlop = 12,
     this.tapSlop = 16,
     this.zoomActivate = 24,
     this.earlyTap = true,
   });
 
-  /// Schema version of the persisted JSON. v2 flipped [earlyTap] on by default.
-  static const _schema = 2;
+  /// Schema version of the persisted JSON. v2 flipped [earlyTap] on by default;
+  /// v3 renamed `collectMs` back to [settleMs].
+  static const _schema = 3;
 
   /// How long a finger must stay down (without moving past [dragSlop]) to count
   /// as a long-press rather than a tap.
@@ -30,11 +31,11 @@ class GestureTuning {
   final int longPressMs;
 
   /// How long after the *first* touch two-finger continuous actions
-  /// (scroll/pinch/pan) are withheld, so a 3rd or 4th finger arriving a beat
-  /// later can still pre-empt them.
+  /// (scroll/pinch/pan) are withheld, letting the gesture settle so a 3rd or 4th
+  /// finger arriving a beat later can still pre-empt them.
   ///
   /// It does *not* bound which fingers join the gesture — [longPressMs] does.
-  final int collectMs;
+  final int settleMs;
 
   /// Movement (px) before a touch counts as a drag (and cancels the long-press).
   final double dragSlop;
@@ -53,11 +54,11 @@ class GestureTuning {
   static const defaults = GestureTuning();
 
   Duration get longPress => Duration(milliseconds: longPressMs);
-  Duration get collect => Duration(milliseconds: collectMs);
+  Duration get settle => Duration(milliseconds: settleMs);
 
   GestureTuning copyWith({
     int? longPressMs,
-    int? collectMs,
+    int? settleMs,
     double? dragSlop,
     double? tapSlop,
     double? zoomActivate,
@@ -65,7 +66,7 @@ class GestureTuning {
   }) =>
       GestureTuning(
         longPressMs: longPressMs ?? this.longPressMs,
-        collectMs: collectMs ?? this.collectMs,
+        settleMs: settleMs ?? this.settleMs,
         dragSlop: dragSlop ?? this.dragSlop,
         tapSlop: tapSlop ?? this.tapSlop,
         zoomActivate: zoomActivate ?? this.zoomActivate,
@@ -75,7 +76,7 @@ class GestureTuning {
   Map<String, dynamic> toJson() => {
         '_v': _schema,
         'longPressMs': longPressMs,
-        'collectMs': collectMs,
+        'settleMs': settleMs,
         'dragSlop': dragSlop,
         'tapSlop': tapSlop,
         'zoomActivate': zoomActivate,
@@ -88,15 +89,17 @@ class GestureTuning {
     final version = (j['_v'] as num?)?.toInt() ?? 1;
     return GestureTuning(
       longPressMs: i('longPressMs', 500),
-      // Pre-1.9.3 'settleMs' (and pre-1.9.2 'multiTapMs') are ignored: the
-      // collection window subsumes the settle and has a different scale.
-      collectMs: i('collectMs', 150),
+      // v3 restored the name `settleMs`, so only trust that key from v3 on: a v1
+      // record's `settleMs` is the *old* window (timed from the second finger,
+      // default 80) and must not be resurrected. v1/v2 carry the same window
+      // under the name `collectMs`. Pre-1.9.2 `multiTapMs` is gone entirely.
+      settleMs: version >= 3 ? i('settleMs', 150) : i('collectMs', 150),
       dragSlop: d('dragSlop', 12),
       tapSlop: d('tapSlop', 16),
       zoomActivate: d('zoomActivate', 24),
-      // The page saves the whole record on any edit, so a pre-v2 `false` is
-      // indistinguishable from the old default — take v2's instead.
-      earlyTap: version < _schema || j['earlyTap'] == true,
+      // v2 turned early-tap on. The page rewrites the whole record on any edit,
+      // so a pre-v2 `false` is indistinguishable from the old default.
+      earlyTap: version < 2 || j['earlyTap'] == true,
     );
   }
 }

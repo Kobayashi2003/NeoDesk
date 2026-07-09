@@ -59,8 +59,8 @@ class _GestureTuningPageState extends State<GestureTuningPage> {
                 // Also the deadline for a multi-finger tap — see GestureEngine.
                 _intRow('Long-press time', _t.longPressMs, 200, 1000, 'ms',
                     (v) => _update(_t.copyWith(longPressMs: v))),
-                _intRow('Finger collection window', _t.collectMs, 60, 300, 'ms',
-                    (v) => _update(_t.copyWith(collectMs: v))),
+                _intRow('Two-finger settle', _t.settleMs, 60, 300, 'ms',
+                    (v) => _update(_t.copyWith(settleMs: v))),
                 _dblRow('Drag threshold', _t.dragSlop, 4, 30, 'px',
                     (v) => _update(_t.copyWith(dragSlop: v))),
                 _dblRow('Tap tolerance', _t.tapSlop, 8, 40, 'px',
@@ -216,12 +216,13 @@ class _GestureTestAreaState extends State<_GestureTestArea> {
   }
 }
 
-/// Turns recognised gestures into a human-readable label for the test area.
+/// Names the [GestureSlot] the engine recognised, for the test area's readout.
 ///
-/// This sandbox exercises the *thresholds*, not the bindings — it has no
-/// [GestureMap] — so it always takes the hold path on a long press, whatever the
-/// user actually bound that slot to. Timings and slops behave exactly as in a
-/// session; the long-press *outcome* does not.
+/// Deliberately binding-agnostic: this sandbox exists to tune *recognition*
+/// thresholds, so it reports which slot fired, never what a session would do
+/// with it. (Reading the real [GestureMap] would mean a long press bound to,
+/// say, Escape could no longer be felt as a hold at all.) It always takes the
+/// hold path so the drag that follows a long press is reachable.
 class _TestSink extends GestureSink {
   _TestSink(this.report);
 
@@ -232,8 +233,8 @@ class _TestSink extends GestureSink {
 
   @override
   LongPressOutcome longPress(GestureSlot slot, Offset at) {
-    report(tr('Long press'));
-    return LongPressOutcome.holding; // so a following drag shows up too
+    report(slot.label);
+    return LongPressOutcome.holding;
   }
 
   @override

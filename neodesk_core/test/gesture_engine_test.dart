@@ -129,19 +129,19 @@ void main() {
   });
 
   group('fingers keep joining until the long-press deadline', () {
-    // The collection window (60ms) is much shorter than the deadline (200ms):
-    // it only withholds two-finger continuous actions, it does not close the
+    // The settle window (60ms) is much shorter than the deadline (200ms): it
+    // only withholds two-finger continuous actions, it does not close the
     // gesture to new fingers.
     GestureEngine slowJoin() => GestureEngine(
-          tuning: const GestureTuning(longPressMs: 200, collectMs: 60),
+          tuning: const GestureTuning(longPressMs: 200, settleMs: 60),
           sink: sink,
         );
 
-    test('a finger landing past the collection window still joins', () async {
+    test('a finger landing past the settle window still joins', () async {
       final e = slowJoin();
       e.down(1, const Offset(50, 50));
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      e.down(2, const Offset(200, 200)); // past collectMs, before the deadline
+      e.down(2, const Offset(200, 200)); // past settle, before the deadline
       e.up(1);
       e.up(2);
 
@@ -194,6 +194,25 @@ void main() {
     });
   });
 
+  group('GestureTuning migration', () {
+    test('a v1 `settleMs` is the old window and must not be resurrected', () {
+      // Pre-1.9.2 it was timed from the second finger and defaulted to 80.
+      expect(GestureTuning.fromJson(const {'settleMs': 80}).settleMs, 150);
+    });
+
+    test('`collectMs` (1.9.3-1.9.6) carries over to settleMs', () {
+      expect(GestureTuning.fromJson(const {'collectMs': 90}).settleMs, 90);
+      expect(
+          GestureTuning.fromJson(const {'_v': 2, 'collectMs': 90}).settleMs, 90);
+    });
+
+    test('from v3 the settleMs key is trusted', () {
+      final round = GestureTuning.fromJson(
+          const GestureTuning(settleMs: 90).toJson());
+      expect(round.settleMs, 90);
+    });
+  });
+
   group('early tap', () {
     test('is on by default, and survives a pre-v2 stored `false`', () {
       expect(GestureTuning.defaults.earlyTap, isTrue);
@@ -210,7 +229,7 @@ void main() {
     test('the fingers left down after an early tap drive nothing', () async {
       final e = GestureEngine(
         tuning: const GestureTuning(
-            longPressMs: 500, collectMs: 20, earlyTap: true),
+            longPressMs: 500, settleMs: 20, earlyTap: true),
         sink: sink,
       );
       e.down(1, const Offset(100, 200));
@@ -265,9 +284,9 @@ void main() {
   group('the collection window never outlives the tap deadline', () {
     test('two fingers apply continuous once the long-press deadline passes',
         () async {
-      // collectMs > longPressMs is reachable from the sliders (300 vs 200).
+      // settleMs > longPressMs is reachable from the sliders (300 vs 200).
       final e = GestureEngine(
-        tuning: const GestureTuning(longPressMs: 200, collectMs: 300),
+        tuning: const GestureTuning(longPressMs: 200, settleMs: 300),
         sink: sink,
       );
       e.down(1, const Offset(100, 200));

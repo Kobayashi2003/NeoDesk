@@ -57,7 +57,7 @@ abstract class GestureSink {
 ///     the collected count. It is also the instant a one-finger long press
 ///     buzzes; a second finger cancels that timer, so a multi-finger gesture
 ///     never buzzes. A finger landing *after* it voids the tap.
-///  2. the **collection window** ([GestureTuning.collectMs]), a shorter one —
+///  2. the **settle window** ([GestureTuning.settleMs]), a shorter one —
 ///     two-finger continuous actions are withheld while it is open, so a 3rd or
 ///     4th finger arriving a beat later can still pre-empt a scroll or pinch.
 class GestureEngine {
@@ -193,8 +193,8 @@ class GestureEngine {
 
   /// Two-finger continuous actions are still withheld, so a 3rd/4th finger can
   /// pre-empt them. Never outlives the deadline (the sliders do allow
-  /// `collectMs > longPressMs`).
-  bool get _collecting => _elapsed < tuning.collect && _accepting;
+  /// `settleMs > longPressMs`).
+  bool get _settling => _elapsed < tuning.settle && _accepting;
 
   void _onLongPress() {
     if (_fingers.length != 1 || _moved || _holding) return;
@@ -216,12 +216,12 @@ class GestureEngine {
     final dMid = mid - _lastMid;
 
     // Accumulate even while withheld, or a fast two-finger swipe that ends
-    // inside the collection window would look perfectly still to [_fireTap].
+    // inside the settle window would look perfectly still to [_fireTap].
     _travel += dMid.distance;
     final spreadDev = _startDist == 0 ? 0.0 : (dist / _startDist - 1).abs();
     if (spreadDev > _maxZoomDev) _maxZoomDev = spreadDev;
 
-    if (!_collecting) {
+    if (!_settling) {
       if (_twoKind == TwoFingerKind.undecided) {
         _twoKind = classifyTwoFinger(
           startA: _startA,
