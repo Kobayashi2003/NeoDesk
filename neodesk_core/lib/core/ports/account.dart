@@ -2,12 +2,18 @@
 ///
 /// RustDesk's public infrastructure requires an account before ID-based
 /// ("remote control code") connections are allowed, so the app needs to hold a
-/// session token. The engine already implements the whole thing — this port is
-/// only the contract the redesigned UI depends on; the adapter binds it to
-/// RustDesk's `UserModel` and its `/api/login` endpoint.
+/// session token.
 ///
-/// Direct-IP peers and self-hosted servers do **not** need an account, so being
-/// signed out never blocks anything in the UI.
+/// **Third-party sign-in only.** The public server has username/password login
+/// switched off — it answers every attempt with *"Username/password login is not
+/// available on this server. Please use the third-party login buttons"* — and it
+/// serves no web console, so there is no registration to link to either: the
+/// account simply *is* the Google / GitHub / Microsoft identity, created the
+/// first time you sign in with it. Hence this port offers only the provider
+/// flow. (A self-hosted server may well accept passwords; adding that back means
+/// adding a method here, not reshaping the port.)
+///
+/// Direct-IP peers never needed an account, so being signed out blocks nothing.
 abstract interface class AccountPort {
   /// The signed-in user, or null when signed out. Replays the current value to
   /// each new subscriber so a widget can build from it immediately.
@@ -16,66 +22,73 @@ abstract interface class AccountPort {
   /// The current value of [user], for a synchronous first build.
   AccountUser? get current;
 
-  /// Where to register or manage the account — the configured API server's web
-  /// console (RustDesk's own for the public service, yours if self-hosted).
-  /// There is no registration API in the client, so signing up always means
-  /// opening this in a browser. Empty when no API server is configured.
-  Future<String> registrationUrl();
+  /// The sign-in providers this server offers, in the order it lists them.
+  /// Empty when the server is unreachable or offers none — the UI should then
+  /// say so rather than show a dead button.
+  Future<List<AuthProvider>> providers();
 
-  /// Step one: username + password.
+  /// Run the browser sign-in for [provider].
   ///
-  /// A brand-new device is normally challenged, so [LoginNeedsCode] is the
-  /// expected outcome of a first sign-in on a phone — not an error path.
-  Future<LoginOutcome> login(String username, String password);
+  /// This is a device-code style flow, not a redirect: the engine opens the
+  /// provider's page in the system browser and polls the API server until the
+  /// user finishes there. Nothing comes back through a deep link, so the app
+  /// needs no custom URL scheme. [onStatus] receives the engine's progress text
+  /// as it changes, for a live status line.
+  ///
+  /// Only one sign-in may be in flight; starting another cancels the first.
+  Future<SignInOutcome> signInWith(
+    AuthProvider provider, {
+    void Function(String status)? onStatus,
+  });
 
-  /// Step two, when [login] returned [LoginNeedsCode]: the six-digit code, sent
-  /// back with the [LoginNeedsCode.secret] that identifies the challenge.
-  Future<LoginOutcome> submitCode(LoginNeedsCode pending, String code);
+  /// Abandon a sign-in started by [signInWith]. Safe to call when none is
+  /// running.
+  Future<void> cancelSignIn();
 
   /// Drop the local session. Best-effort tells the server; the local token is
   /// cleared either way.
   Future<void> logout();
 }
 
-/// The result of a sign-in step.
-sealed class LoginOutcome {
-  const LoginOutcome();
+/// A sign-in provider as advertised by the server's login options.
+class AuthProvider {
+  const AuthProvider({required this.id, required this.label});
+
+  /// The server's own key — `google`, `github`, `microsoft`, … Passed straight
+  /// back to the engine to start the flow, and used to pick the button icon.
+  final String id;
+
+  /// Human-readable name for the button.
+  final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AuthProvider && other.id == id && other.label == label;
+
+  @override
+  int get hashCode => Object.hash(id, label);
 }
 
-/// Signed in; a token has been stored.
-class LoginSucceeded extends LoginOutcome {
-  const LoginSucceeded(this.user);
+/// How a [AccountPort.signInWith] attempt ended.
+sealed class SignInOutcome {
+  const SignInOutcome();
+}
+
+/// Signed in; the engine has stored the session token.
+class SignInSucceeded extends SignInOutcome {
+  const SignInSucceeded(this.user);
 
   final AccountUser user;
 }
 
-/// The server wants a six-digit code before it will issue a token — either
-/// mailed out because it doesn't recognise this device, or from the user's
-/// authenticator app when two-factor is on. Both are answered the same way, so
-/// [byEmail] only changes the wording shown to the user.
-class LoginNeedsCode extends LoginOutcome {
-  const LoginNeedsCode({
-    required this.secret,
-    required this.byEmail,
-    required this.username,
-  });
-
-  /// Opaque handle for this challenge; must be echoed back with the code.
-  final String secret;
-
-  /// True: emailed code. False: authenticator (TOTP) code.
-  final bool byEmail;
-
-  /// Who the challenge is for. Carried because completing it is a second
-  /// request that has to name the same account, and because the UI can say
-  /// whose inbox to check.
-  final String username;
+/// The user backed out, or [AccountPort.cancelSignIn] was called.
+class SignInCancelled extends SignInOutcome {
+  const SignInCancelled();
 }
 
-/// The attempt failed. [message] is already human-readable and localised where
-/// the source allows it — show it as-is.
-class LoginFailed extends LoginOutcome {
-  const LoginFailed(this.message);
+/// The attempt failed. [message] is already human-readable — show it as-is.
+class SignInFailed extends SignInOutcome {
+  const SignInFailed(this.message);
 
   final String message;
 }

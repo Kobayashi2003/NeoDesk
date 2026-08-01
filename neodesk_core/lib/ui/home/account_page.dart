@@ -8,12 +8,10 @@ import '../theme/dimens.dart';
 /// Sign in to a RustDesk account.
 ///
 /// RustDesk's public servers require an account before ID ("remote code")
-/// connections are allowed. Direct-IP peers don't, so nothing here gates the
-/// rest of the app — this page is reachable from Settings and that's all.
-///
-/// Three states, one page: credentials → (optional) six-digit code → signed in.
-/// The code step is the *normal* path on a device the server hasn't seen, not an
-/// error, so it gets a first-class screen rather than a dialog.
+/// connections are allowed, and they accept **only third-party sign-in** — see
+/// [AccountPort]. So this page is a list of whatever providers the server
+/// advertises, plus the signed-in state. Direct-IP peers don't need any of it,
+/// which is why nothing here gates the rest of the app.
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key, required this.core});
 
@@ -24,15 +22,13 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  final _userCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
-
   AccountUser? _user;
-  LoginNeedsCode? _pending;
+
+  List<AuthProvider>? _providers; // null = still loading
+  AuthProvider? _busyWith; // non-null while a sign-in runs
+  String _status = '';
   String? _error;
-  bool _busy = false;
-  bool _obscure = true;
+  bool _leaving = false; // signing out
 
   AccountPort get _account => widget.core.account;
 
@@ -40,61 +36,65 @@ class _AccountPageState extends State<AccountPage> {
   void initState() {
     super.initState();
     _user = _account.current;
+    if (_user == null) _loadProviders();
   }
 
-  @override
-  void dispose() {
-    _userCtrl.dispose();
-    _passCtrl.dispose();
-    _codeCtrl.dispose();
-    super.dispose();
+  Future<void> _loadProviders() async {
+    final list = await _account.providers();
+    if (!mounted) return;
+    setState(() => _providers = list);
   }
 
-  /// Runs [step] with the button spinner on, and routes the outcome. Every
-  /// sign-in path funnels through here so the busy flag and the error text can
-  /// never drift out of sync with what actually happened.
-  Future<void> _run(Future<LoginOutcome> Function() step) async {
-    if (_busy) return;
+  Future<void> _signIn(AuthProvider provider) async {
+    if (_busyWith != null) return;
     setState(() {
-      _busy = true;
+      _busyWith = provider;
+      _status = '';
       _error = null;
     });
-    final outcome = await step();
+
+    final outcome = await _account.signInWith(
+      provider,
+      onStatus: (s) {
+        if (mounted && _busyWith != null) setState(() => _status = s);
+      },
+    );
     if (!mounted) return;
+
     setState(() {
-      _busy = false;
+      _busyWith = null;
+      _status = '';
       switch (outcome) {
-        case LoginSucceeded(:final user):
+        case SignInSucceeded(:final user):
           _user = user;
-          _pending = null;
-          _passCtrl.clear();
-          _codeCtrl.clear();
-        case LoginNeedsCode():
-          _pending = outcome;
-          _codeCtrl.clear();
-        case LoginFailed(:final message):
+        case SignInFailed(:final message):
           _error = message;
+        case SignInCancelled():
+          break; // the user backed out; say nothing
       }
     });
   }
 
-  Future<void> _signOut() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    await _account.logout();
+  Future<void> _cancel() async {
+    await _account.cancelSignIn();
     if (!mounted) return;
     setState(() {
-      _busy = false;
-      _user = null;
-      _pending = null;
-      _error = null;
+      _busyWith = null;
+      _status = '';
     });
   }
 
-  Future<void> _openRegistration() async {
-    final url = await _account.registrationUrl();
-    if (url.isEmpty) return;
-    await widget.core.openExternalUrl(url);
+  Future<void> _signOut() async {
+    if (_leaving) return;
+    setState(() => _leaving = true);
+    await _account.logout();
+    if (!mounted) return;
+    setState(() {
+      _leaving = false;
+      _user = null;
+      _error = null;
+    });
+    _loadProviders();
   }
 
   @override
@@ -104,14 +104,7 @@ class _AccountPageState extends State<AccountPage> {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Dimens.pageInset),
-          children: [
-            if (_user != null)
-              ..._signedIn(_user!)
-            else if (_pending != null)
-              ..._codeStep(_pending!)
-            else
-              ..._credentialsStep(),
-          ],
+          children: _user != null ? _signedIn(_user!) : _signIn_(),
         ),
       ),
     );
@@ -129,96 +122,68 @@ class _AccountPageState extends State<AccountPage> {
         ),
         if (user.labelWithHandle != user.label) ...[
           const SizedBox(height: Dimens.s4),
-          Center(
-            child: Text('@${user.name}', style: AppTypography.caption),
-          ),
+          Center(child: Text('@${user.name}', style: AppTypography.caption)),
         ],
         const SizedBox(height: Dimens.s32),
         _note(tr('Signed in — remote-code connections are available.')),
         const SizedBox(height: Dimens.s24),
-        _button(tr('Sign out'), _signOut, danger: true),
+        _wideButton(
+          label: tr('Sign out'),
+          onPressed: _signOut,
+          busy: _leaving,
+          color: AppColors.danger,
+        ),
       ];
 
-  // -------------------------------------------------------------- credentials
+  // --------------------------------------------------------------- signing in
 
-  List<Widget> _credentialsStep() => [
+  List<Widget> _signIn_() {
+    final providers = _providers;
+    return [
+      const SizedBox(height: Dimens.s8),
+      _note(tr('RustDesk requires an account before connecting by remote code. '
+          'Direct IP connections work without one.')),
+      const SizedBox(height: Dimens.s24),
+      if (providers == null)
+        const Center(child: Padding(
+          padding: EdgeInsets.all(Dimens.s24),
+          child: SizedBox(
+              width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+        ))
+      else if (providers.isEmpty)
+        _note(tr('This server offers no sign-in providers, or it could not be '
+            'reached.'))
+      else
+        for (final p in providers) ...[
+          _ProviderButton(
+            provider: p,
+            busy: _busyWith == p,
+            enabled: _busyWith == null,
+            onPressed: () => _signIn(p),
+          ),
+          const SizedBox(height: Dimens.s12),
+        ],
+      if (_busyWith != null) ...[
         const SizedBox(height: Dimens.s8),
-        _note(tr(
-            'RustDesk requires an account before connecting by remote code. '
-            'Direct IP connections work without one.')),
-        const SizedBox(height: Dimens.s24),
-        _field(
-          controller: _userCtrl,
-          label: tr('Username'),
-          icon: Icons.person_outline,
-          keyboardType: TextInputType.emailAddress,
-          onSubmitted: (_) => _submitCredentials(),
+        _note(_status.isEmpty ? tr('Waiting for the browser…') : tr(_status)),
+        const SizedBox(height: Dimens.s8),
+        Center(
+          child: TextButton(onPressed: _cancel, child: Text(tr('Cancel'))),
         ),
+      ],
+      if (_error != null) ...[
         const SizedBox(height: Dimens.s12),
-        _field(
-          controller: _passCtrl,
-          label: tr('Password'),
-          icon: Icons.lock_outline,
-          obscure: _obscure,
-          trailing: IconButton(
-            icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
-                color: AppColors.textDisabled, size: 20),
-            onPressed: () => setState(() => _obscure = !_obscure),
-          ),
-          onSubmitted: (_) => _submitCredentials(),
+        Text(
+          tr(_error!),
+          style: AppTypography.caption.copyWith(color: AppColors.danger),
+          textAlign: TextAlign.center,
         ),
-        _errorText(),
-        const SizedBox(height: Dimens.s24),
-        _button(tr('Sign in'), _submitCredentials),
-        const SizedBox(height: Dimens.s16),
-        Center(
-          child: TextButton.icon(
-            onPressed: _busy ? null : _openRegistration,
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: Text(tr('Create an account on the web')),
-          ),
-        ),
-      ];
-
-  void _submitCredentials() =>
-      _run(() => _account.login(_userCtrl.text.trim(), _passCtrl.text));
-
-  // ---------------------------------------------------------------- code step
-
-  List<Widget> _codeStep(LoginNeedsCode pending) => [
-        const SizedBox(height: Dimens.s8),
-        _note(pending.byEmail
-            ? trArg('A verification code was sent to the email for {}.',
-                pending.username)
-            : tr('Enter the code from your authenticator app.')),
-        const SizedBox(height: Dimens.s24),
-        _field(
-          controller: _codeCtrl,
-          label: tr('Verification code'),
-          icon: Icons.pin_outlined,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          onSubmitted: (_) => _submitCode(pending),
-        ),
-        _errorText(),
-        const SizedBox(height: Dimens.s24),
-        _button(tr('Verify'), () => _submitCode(pending)),
-        const SizedBox(height: Dimens.s8),
-        Center(
-          child: TextButton(
-            onPressed: _busy
-                ? null
-                : () => setState(() {
-                      _pending = null;
-                      _error = null;
-                    }),
-            child: Text(tr('Back')),
-          ),
-        ),
-      ];
-
-  void _submitCode(LoginNeedsCode pending) =>
-      _run(() => _account.submitCode(pending, _codeCtrl.text.trim()));
+      ],
+      const SizedBox(height: Dimens.s24),
+      _note(tr('Your account is your provider identity — signing in the first '
+          'time creates it. There is nothing to register.')),
+    ];
+  }
 
   // ------------------------------------------------------------------- pieces
 
@@ -228,66 +193,24 @@ class _AccountPageState extends State<AccountPage> {
         textAlign: TextAlign.center,
       );
 
-  Widget _errorText() => _error == null
-      ? const SizedBox.shrink()
-      : Padding(
-          padding: const EdgeInsets.only(top: Dimens.s12),
-          child: Text(
-            tr(_error!),
-            style: AppTypography.caption.copyWith(color: AppColors.danger),
-            textAlign: TextAlign.center,
-          ),
-        );
-
-  Widget _field({
-    required TextEditingController controller,
+  Widget _wideButton({
     required String label,
-    required IconData icon,
-    bool obscure = false,
-    bool autofocus = false,
-    TextInputType? keyboardType,
-    Widget? trailing,
-    ValueChanged<String>? onSubmitted,
+    required VoidCallback onPressed,
+    required bool busy,
+    required Color color,
   }) =>
-      TextField(
-        controller: controller,
-        obscureText: obscure,
-        autofocus: autofocus,
-        enabled: !_busy,
-        keyboardType: keyboardType,
-        textInputAction: TextInputAction.done,
-        onSubmitted: onSubmitted,
-        style: AppTypography.body,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
-          suffixIcon: trailing,
-          filled: true,
-          fillColor: AppColors.bgInput,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(Dimens.rCard),
-            borderSide: BorderSide(color: AppColors.border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(Dimens.rCard),
-            borderSide: BorderSide(color: AppColors.border),
-          ),
-        ),
-      );
-
-  Widget _button(String label, VoidCallback onPressed, {bool danger = false}) =>
       SizedBox(
         height: 48,
         child: ElevatedButton(
-          onPressed: _busy ? null : onPressed,
+          onPressed: busy ? null : onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: danger ? AppColors.danger : AppColors.accent,
+            backgroundColor: color,
             foregroundColor: AppColors.textOnAccent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(Dimens.rPill),
             ),
           ),
-          child: _busy
+          child: busy
               ? SizedBox(
                   width: 20,
                   height: 20,
@@ -297,6 +220,65 @@ class _AccountPageState extends State<AccountPage> {
               : Text(label, style: AppTypography.body),
         ),
       );
+}
+
+/// One "Continue with X" button.
+///
+/// The icon is picked from the engine's bundled `auth-*.svg` set by provider id;
+/// an unknown id falls back to a generic key icon rather than a broken asset.
+class _ProviderButton extends StatelessWidget {
+  const _ProviderButton({
+    required this.provider,
+    required this.busy,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final AuthProvider provider;
+  final bool busy;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  static const _icons = <String, IconData>{
+    'google': Icons.g_mobiledata,
+    'github': Icons.code,
+    'microsoft': Icons.window,
+    'apple': Icons.apple,
+    'gitlab': Icons.merge_type,
+    'facebook': Icons.facebook,
+    'okta': Icons.shield_outlined,
+    'auth0': Icons.shield_outlined,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: enabled ? onPressed : null,
+        icon: busy
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.accent),
+              )
+            : Icon(_icons[provider.id.toLowerCase()] ?? Icons.vpn_key_outlined,
+                size: 20),
+        label: Text(
+          trArg('Continue with {}', provider.label),
+          style: AppTypography.body,
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Dimens.rPill),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The account's initial in an accent circle.

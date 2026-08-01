@@ -42,36 +42,45 @@ void main() {
       expect(account.current, isNull);
     });
 
-    test('rejects empty credentials without challenging', () async {
-      expect(await account.login('', 'pw'), isA<LoginFailed>());
-      expect(await account.login('user', ''), isA<LoginFailed>());
+    test('offers the providers the server advertises', () async {
+      final list = await account.providers();
+      expect(list.map((p) => p.id), containsAll(['google', 'github']));
+      // Every provider must carry a label, or the button renders blank.
+      expect(list.every((p) => p.label.isNotEmpty), isTrue);
+    });
+
+    test('a completed sign-in exposes the user', () async {
+      final list = await account.providers();
+      final outcome = await account.signInWith(list.first);
+      expect(outcome, isA<SignInSucceeded>());
+      expect(account.current, isNotNull);
+      expect((outcome as SignInSucceeded).user.name, account.current!.name);
+    });
+
+    test('reports progress while it waits', () async {
+      final seen = <String>[];
+      final list = await account.providers();
+      await account.signInWith(list.first, onStatus: seen.add);
+      expect(seen, isNotEmpty);
+    });
+
+    test('cancelling mid-flight leaves the user signed out', () async {
+      final list = await account.providers();
+      final pending = account.signInWith(list.first);
+      await Future.delayed(const Duration(milliseconds: 100));
+      await account.cancelSignIn();
+      expect(await pending, isA<SignInCancelled>());
       expect(account.current, isNull);
     });
 
-    test('challenges for a code before issuing a session', () async {
-      final outcome = await account.login('user', 'pw');
-      expect(outcome, isA<LoginNeedsCode>());
-      // Still signed out — a challenge is not a sign-in.
+    test('cancelling when nothing is running is harmless', () async {
+      await account.cancelSignIn();
       expect(account.current, isNull);
-    });
-
-    test('a wrong code fails and leaves the user signed out', () async {
-      final pending = await account.login('user', 'pw') as LoginNeedsCode;
-      expect(await account.submitCode(pending, '000000'), isA<LoginFailed>());
-      expect(account.current, isNull);
-    });
-
-    test('the right code signs in and exposes the user', () async {
-      final pending = await account.login('kobayashi', 'pw') as LoginNeedsCode;
-      final done = await account.submitCode(pending, FakeAccount.demoCode);
-      expect(done, isA<LoginSucceeded>());
-      expect(account.current?.name, 'kobayashi');
-      expect((done as LoginSucceeded).user.name, 'kobayashi');
     });
 
     test('logout clears the session', () async {
-      final pending = await account.login('user', 'pw') as LoginNeedsCode;
-      await account.submitCode(pending, FakeAccount.demoCode);
+      final list = await account.providers();
+      await account.signInWith(list.first);
       expect(account.current, isNotNull);
       await account.logout();
       expect(account.current, isNull);
@@ -79,22 +88,22 @@ void main() {
 
     test('the user stream replays the current value to a late subscriber',
         () async {
-      final pending = await account.login('user', 'pw') as LoginNeedsCode;
-      await account.submitCode(pending, FakeAccount.demoCode);
+      final list = await account.providers();
+      await account.signInWith(list.first);
       // Subscribing after the fact must still see the signed-in user, or a
       // widget built later would render as signed out.
-      expect((await account.user.first)?.name, 'user');
+      expect((await account.user.first)?.name, account.current!.name);
     });
 
     test('the user stream emits sign-in and sign-out', () async {
       final seen = <String?>[];
       final sub = account.user.listen((u) => seen.add(u?.name));
-      final pending = await account.login('user', 'pw') as LoginNeedsCode;
-      await account.submitCode(pending, FakeAccount.demoCode);
+      final list = await account.providers();
+      await account.signInWith(list.first);
       await account.logout();
       await Future.delayed(Duration.zero);
       await sub.cancel();
-      expect(seen, [null, 'user', null]);
+      expect(seen, [null, 'demo', null]);
     });
   });
 }

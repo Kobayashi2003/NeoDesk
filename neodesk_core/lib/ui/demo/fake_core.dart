@@ -138,18 +138,23 @@ const _sampleLan = <PeerEntry>[
       id: '192.168.1.20', alias: 'NAS-Server', platform: 'Linux', online: true),
 ];
 
-/// In-memory account, so the sign-in screens can be built and clicked through
-/// without a server.
+/// In-memory account, so the sign-in screen can be built and clicked through
+/// without a server or a browser.
 ///
-/// It mirrors the shape of the real flow rather than short-circuiting it: a
-/// sign-in is always challenged for a code first — which is what RustDesk's
-/// server does on a device it hasn't seen — so the demo reaches both screens.
-/// The accepted code is [demoCode].
+/// It mirrors the real flow's shape rather than short-circuiting it: a sign-in
+/// reports progress for a moment before completing, and can be cancelled, so
+/// the waiting and cancel paths are reachable in the demo.
 class FakeAccount implements AccountPort {
-  static const demoCode = '123456';
+  static const _providers = [
+    AuthProvider(id: 'google', label: 'Google'),
+    AuthProvider(id: 'github', label: 'GitHub'),
+    AuthProvider(id: 'microsoft', label: 'Microsoft'),
+  ];
 
   final _users = StreamController<AccountUser?>.broadcast();
   AccountUser? _current;
+  bool _cancelled = false;
+  bool _running = false;
 
   @override
   AccountUser? get current => _current;
@@ -161,28 +166,34 @@ class FakeAccount implements AccountPort {
   }
 
   @override
-  Future<String> registrationUrl() async => 'https://admin.rustdesk.com';
-
-  @override
-  Future<LoginOutcome> login(String username, String password) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (username.trim().isEmpty) return const LoginFailed('Username missed');
-    if (password.isEmpty) return const LoginFailed('Password missed');
-    return LoginNeedsCode(
-      secret: 'demo-secret',
-      byEmail: true,
-      username: username.trim(),
-    );
+  Future<List<AuthProvider>> providers() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return _providers;
   }
 
   @override
-  Future<LoginOutcome> submitCode(LoginNeedsCode pending, String code) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (code.trim() != demoCode) {
-      return const LoginFailed('Wrong verification code');
+  Future<SignInOutcome> signInWith(
+    AuthProvider provider, {
+    void Function(String status)? onStatus,
+  }) async {
+    _cancelled = false;
+    _running = true;
+    try {
+      for (final step in ['Opening browser…', 'Waiting for authorization…']) {
+        onStatus?.call(step);
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (_cancelled) return const SignInCancelled();
+      }
+      _emit(AccountUser(name: 'demo', displayName: 'Demo (${provider.label})'));
+      return SignInSucceeded(_current!);
+    } finally {
+      _running = false;
     }
-    _emit(AccountUser(name: pending.username, displayName: 'Demo User'));
-    return LoginSucceeded(_current!);
+  }
+
+  @override
+  Future<void> cancelSignIn() async {
+    if (_running) _cancelled = true;
   }
 
   @override

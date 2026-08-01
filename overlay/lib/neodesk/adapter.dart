@@ -30,8 +30,6 @@ import '../common.dart'
         translate,
         AndroidPermissionManager,
         openMonitorInTheSameTab;
-import '../common/hbbs/hbbs.dart'
-    show HttpType, LoginRequest, LoginResponse, RequestException;
 import '../consts.dart'
     show
         kManageExternalStorage,
@@ -44,6 +42,7 @@ import '../models/input_model.dart' show MouseButtons, InputModel;
 import '../models/model.dart';
 import '../models/peer_model.dart' show Peers, Peer;
 import '../models/platform_model.dart' show bind;
+import '../models/user_model.dart' show UserModel;
 
 part 'adapter/session.dart';
 part 'adapter/input.dart';
