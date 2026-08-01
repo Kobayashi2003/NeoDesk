@@ -18,6 +18,7 @@ export 'core/ports/input_sink.dart';
 export 'core/ports/config_store.dart';
 export 'core/ports/peer_repository.dart';
 export 'core/ports/file_transfer.dart';
+export 'core/ports/account.dart';
 
 // Config key registry
 export 'core/config_keys.dart';

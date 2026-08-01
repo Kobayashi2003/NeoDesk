@@ -281,6 +281,29 @@ const Map<String, String> _zh = {
   'Hold middle button': '长按中键',
   'Hold left button (drag to select / move)': '长按左键（拖动以选择 / 移动）',
   'Right click at the second finger': '在第二根手指处右键单击',
+  // Account
+  'Account': '账号',
+  'Not signed in': '未登录',
+  'Required for remote-code connections': '使用远控码连接需要登录',
+  'RustDesk requires an account before connecting by remote code. '
+      'Direct IP connections work without one.':
+      'RustDesk 要求登录账号后才能通过远控码连接。直接使用 IP 连接则无需登录。',
+  'Username': '用户名',
+  'Password': '密码',
+  'Sign in': '登录',
+  'Sign out': '退出登录',
+  'Create an account on the web': '前往网页注册',
+  'Verification code': '验证码',
+  'A verification code was sent to the email for {}.':
+      '验证码已发送至 {} 的邮箱。',
+  'Enter the code from your authenticator app.': '请输入身份验证器应用中的验证码。',
+  'Verify': '验证',
+  // 'Back' is already defined above (shared with the gesture pages).
+  'Signed in — remote-code connections are available.':
+      '已登录，可以使用远控码连接。',
+  'Username missed': '请输入用户名',
+  'Password missed': '请输入密码',
+  'Wrong verification code': '验证码错误',
 };
 
 const Map<String, String> _ja = {
@@ -519,4 +542,28 @@ const Map<String, String> _ja = {
   'Hold left button (drag to select / move)':
       '左ボタンを長押し（ドラッグで選択 / 移動）',
   'Right click at the second finger': '2 本目の指の位置で右クリック',
+  // Account
+  'Account': 'アカウント',
+  'Not signed in': '未ログイン',
+  'Required for remote-code connections': 'リモートコード接続にはログインが必要',
+  'RustDesk requires an account before connecting by remote code. '
+      'Direct IP connections work without one.':
+      'RustDesk はリモートコードで接続する前にアカウントを要求します。IP 直接接続ならログインは不要です。',
+  'Username': 'ユーザー名',
+  'Password': 'パスワード',
+  'Sign in': 'ログイン',
+  'Sign out': 'ログアウト',
+  'Create an account on the web': 'ウェブで新規登録',
+  'Verification code': '確認コード',
+  'A verification code was sent to the email for {}.':
+      '{} のメールアドレスに確認コードを送信しました。',
+  'Enter the code from your authenticator app.':
+      '認証アプリに表示されたコードを入力してください。',
+  'Verify': '確認',
+  // 'Back' is already defined above (shared with the gesture pages).
+  'Signed in — remote-code connections are available.':
+      'ログイン済み — リモートコード接続が利用できます。',
+  'Username missed': 'ユーザー名を入力してください',
+  'Password missed': 'パスワードを入力してください',
+  'Wrong verification code': '確認コードが違います',
 };

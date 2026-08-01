@@ -9,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../theme/dimens.dart';
 import '../widgets/app_sheet.dart';
+import 'account_page.dart';
 
 /// A selectable preset: the [value] persisted to [ConfigStore] and the [label]
 /// shown to the user (plus an optional one-line [sub]title).
@@ -351,10 +352,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 Dimens.pageInset, Dimens.s16, Dimens.pageInset, 0),
             child: Text(tr('Settings'), style: AppTypography.display),
           ),
+          // Account sits above everything: RustDesk's public servers refuse
+          // remote-code connections without one, so it's the first thing that
+          // can be wrong. It never blocks the app though — direct IP is fine
+          // signed out.
+          _category('Account'),
+          _accountRow(),
           // Two-level grouping: three big categories — Control (how you drive
           // the remote), Interface (how the app looks/reads), and Other (app-
           // level). Control is subdivided into Interaction, Pointer & scrolling,
-          // and Keyboard. See DESIGN.md §4.3.
+          // and Keyboard. See DESIGN.md §6.4.
           _category('Control'),
           _subsection('Interaction', [
             _row(Icons.touch_app, 'Default mode',
@@ -599,6 +606,35 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ],
         ),
+      );
+
+  /// The account row, live on the port's stream so signing in or out on the
+  /// account page is reflected here without this page having to be rebuilt.
+  Widget _accountRow() => StreamBuilder<AccountUser?>(
+        stream: widget.core.account.user,
+        initialData: widget.core.account.current,
+        builder: (context, snap) {
+          final user = snap.data;
+          return ListTile(
+            leading: Icon(
+              user == null ? Icons.person_outline : Icons.account_circle,
+              color: user == null ? AppColors.textSecondary : AppColors.accent,
+            ),
+            title: Text(user?.label ?? tr('Not signed in'),
+                style: AppTypography.body),
+            subtitle: Text(
+              user == null
+                  ? tr('Required for remote-code connections')
+                  : '@${user.name}',
+              style: AppTypography.caption,
+            ),
+            trailing:
+                Icon(Icons.chevron_right, color: AppColors.textDisabled, size: 20),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => AccountPage(core: widget.core),
+            )),
+          );
+        },
       );
 
   Widget _tile(IconData icon, String label,

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart' show BuildContext;
 
+import '../ports/account.dart';
 import '../ports/config_store.dart';
 import '../ports/file_transfer.dart';
 import '../ports/frame_source.dart';
@@ -18,6 +19,10 @@ abstract interface class NeodeskCore {
   ConfigStore get config;
   PeerRepository get peers;
   FileTransferFactory get files;
+
+  /// Signing in to a RustDesk account — required by RustDesk's public servers
+  /// before ID-based connections are allowed. See [AccountPort].
+  AccountPort get account;
 
   /// Scan a QR code and return its text (a device ID / address), or null if the
   /// user cancelled. The app implementation opens a camera page; the demo returns
