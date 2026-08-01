@@ -31,14 +31,25 @@ elseif (-not (Test-Path (Join-Path $root 'rustdesk\pubspec.yaml'))) {
   throw '-SkipSync given but rustdesk/ does not exist. Run scripts\sync-rustdesk.ps1 first.'
 }
 
-# --- require flutter (PATH first, then FLUTTER_HOME) -------------------------
-if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
-  if ($env:FLUTTER_HOME -and (Test-Path "$env:FLUTTER_HOME\bin\flutter.bat")) {
-    $env:PATH = "$env:FLUTTER_HOME\bin;$env:PATH"
-  }
-  else {
-    throw "flutter not found. Add Flutter 3.24.5 to PATH, or set `$env:FLUTTER_HOME to your Flutter SDK."
-  }
+# --- require flutter 3.24.5 --------------------------------------------------
+# FLUTTER_HOME wins over PATH: a machine can easily have a newer Flutter first on
+# PATH (e.g. a package-manager install), and this RustDesk vintage does not build
+# with it - the failure is a wall of unrelated analyzer errors like
+# "DialogTheme can't be assigned to DialogThemeData", which sends you hunting in
+# the wrong place. So pin it here and verify.
+$wantFlutter = '3.24.5'
+if ($env:FLUTTER_HOME -and (Test-Path "$env:FLUTTER_HOME\bin\flutter.bat")) {
+  $env:PATH = "$env:FLUTTER_HOME\bin;$env:PATH"
+}
+elseif (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
+  throw "flutter not found. Set `$env:FLUTTER_HOME to a Flutter $wantFlutter SDK, or put it on PATH."
+}
+$flutterVer = (& flutter --version 2>&1 | Select-Object -First 1) -replace '^Flutter ([0-9.]+).*', '$1'
+if ($flutterVer -ne $wantFlutter) {
+  throw @"
+wrong Flutter: found $flutterVer at $((Get-Command flutter).Source), need $wantFlutter.
+Set `$env:FLUTTER_HOME to the $wantFlutter SDK (this machine: D:\Program\flutter_3245).
+"@
 }
 
 # Proxy is needed for network steps (pub get / build); the Dart test harness
