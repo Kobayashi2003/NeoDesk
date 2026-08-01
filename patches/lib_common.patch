@@ -1,0 +1,56 @@
+--- a/lib/common.dart
++++ b/lib/common.dart
+@@ -1185,47 +1185,12 @@
+     VoidCallback? onSubmit,
+     int? submitTimeout}) {
+   dialogManager.dismissAll();
+-  if (type.contains('insecure-connection')) {
+-    Future<void> closeSession() async {
+-      await bind.sessionSetCommon(
+-        sessionId: sessionId,
+-        key: 'continue-insecure-connection',
+-        value: 'N',
+-      );
+-      dialogManager.dismissAll();
+-      closeConnection();
+-    }
+-
+-    void continueSession() {
+-      unawaited(
+-        bind.sessionSetCommon(
+-          sessionId: sessionId,
+-          key: 'continue-insecure-connection',
+-          value: 'Y',
+-        ),
+-      );
+-      dialogManager.dismissAll();
+-    }
+-
+-    dialogManager.show(
+-      (setState, close, context) => CustomAlertDialog(
+-        title: null,
+-        content: SelectionArea(child: msgboxContent(type, title, text)),
+-        actions: [
+-          dialogButton(
+-            'Continue',
+-            onPressed: continueSession,
+-            isOutline: true,
+-          ),
+-          dialogButton('Disconnect', onPressed: closeSession),
+-        ],
+-        onSubmit: closeSession,
+-        onCancel: closeSession,
+-      ),
+-      tag: '$sessionId-$type-$title-$text-$link',
+-    );
+-    return;
+-  }
++  // NEODESK DEVIATION from vendored upstream (see DESIGN.md §3.3/§3.4):
++  // 1.4.9's dedicated 'insecure-connection' dialog is removed. It is the only
++  // caller of bind.sessionSetCommon, which the vendored 1.4.7 librustdesk.so
++  // does not export — keeping it would crash at runtime on a non-E2EE peer.
++  // Falls through to the generic msgBox path, i.e. 1.4.7's behaviour.
++  // Re-evaluate when the prebuilt engine is rebuilt at >= 1.4.9.
+ 
+   List<Widget> buttons = [];
+   bool hasOk = false;

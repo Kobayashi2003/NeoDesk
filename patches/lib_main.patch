@@ -1,0 +1,68 @@
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -26,6 +26,7 @@
+ import 'common.dart';
+ import 'consts.dart';
+ import 'mobile/pages/home_page.dart';
++import 'neodesk/launcher.dart';
+ import 'mobile/pages/server_page.dart';
+ import 'mobile/widgets/deploy_dialog.dart';
+ import 'models/platform_model.dart';
+@@ -186,6 +187,7 @@
+   draggablePositions.load();
+   await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
+   gFFI.userModel.refreshCurrentUser();
++  setupNeodesk(); // redesigned UI: wire the real render widget into neodesk
+   runApp(App());
+   await initUniLinks();
+ }
+@@ -500,17 +502,31 @@
+         child: GetMaterialApp(
+           navigatorKey: globalKey,
+           debugShowCheckedModeBanner: false,
+-          title: isWeb
+-              ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
+-              : bind.mainGetAppNameSync(),
+-          theme: MyTheme.lightTheme,
+-          darkTheme: MyTheme.darkTheme,
+-          themeMode: MyTheme.currentThemeMode(),
++          // Mobile is the neodesk-branded build, so the OS-facing app name (the
++          // Android task switcher / app identity) is "neodesk", not the engine's
++          // "RustDesk". Desktop/web keep the engine app name.
++          title: _isNeodeskMobile
++              ? neodeskAppName
++              : isWeb
++                  ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
++                  : bind.mainGetAppNameSync(),
++          // Mobile runs the redesigned neodesk UI; engine dialogs/toasts/sheets
++          // use the neodesk light & dark theme slots, switched live to follow the
++          // neodesk Theme setting (see launcher: Get.changeThemeMode). Desktop/web
++          // keep the original RustDesk theme.
++          theme: _isNeodeskMobile
++              ? neodeskEngineTheme(Brightness.light)
++              : MyTheme.lightTheme,
++          darkTheme: _isNeodeskMobile
++              ? neodeskEngineTheme(Brightness.dark)
++              : MyTheme.darkTheme,
++          themeMode:
++              _isNeodeskMobile ? neodeskThemeMode() : MyTheme.currentThemeMode(),
+           home: isDesktop
+               ? const DesktopTabPage()
+               : isWeb
+                   ? WebHomePage()
+-                  : HomePage(),
++                  : const NeodeskEntry(), // redesigned mobile UI
+           localizationsDelegates: const [
+             GlobalMaterialLocalizations.delegate,
+             GlobalWidgetsLocalizations.delegate,
+@@ -549,6 +565,10 @@
+   }
+ }
+ 
++/// True when the app runs the redesigned neodesk mobile UI (Android/iOS), as
++/// opposed to desktop or the web client.
++bool get _isNeodeskMobile => !isDesktop && !isWeb;
++
+ Widget _keepScaleBuilder(BuildContext context, Widget? child) {
+   return MediaQuery(
+     data: MediaQuery.of(context).copyWith(

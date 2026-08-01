@@ -14,10 +14,22 @@
 param(
   [ValidateSet('debug', 'release')]
   [string]$Mode = 'release',
-  [switch]$SkipTests
+  [switch]$SkipTests,
+  [switch]$SkipSync
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+# --- rustdesk/ is generated, not vendored ------------------------------------
+# It may be absent (fresh clone) or stale (overlay/patches edited since the last
+# sync), so rebuild it unless explicitly told not to. See CLAUDE.md.
+if (-not $SkipSync) {
+  & (Join-Path $PSScriptRoot 'sync-rustdesk.ps1')
+  if ($LASTEXITCODE -ne 0) { throw 'sync-rustdesk failed' }
+}
+elseif (-not (Test-Path (Join-Path $root 'rustdesk\pubspec.yaml'))) {
+  throw '-SkipSync given but rustdesk/ does not exist. Run scripts\sync-rustdesk.ps1 first.'
+}
 
 # --- require flutter (PATH first, then FLUTTER_HOME) -------------------------
 if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {

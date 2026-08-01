@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "Pins everything scripts/sync-rustdesk.ps1 pulls from outside this repo.",
+    "rustdesk.tag is the SOURCE version (Dart/Android); engine.tag is the",
+    "PREBUILT ENGINE version. They are allowed to differ - and currently do -",
+    "because the engine ships as a binary we do not build. Read CLAUDE.md",
+    "before changing either: the bridge in overlay/lib/ is generated from the",
+    "engine's Rust source and must agree with engine.tag, not rustdesk.tag."
+  ],
+  "rustdesk": {
+    "tag": "1.4.9",
+    "repo": "https://github.com/rustdesk/rustdesk.git"
+  },
+  "engine": {
+    "tag": "1.4.7",
+    "apkUrl": "https://github.com/rustdesk/rustdesk/releases/download/1.4.7/rustdesk-1.4.7-aarch64-signed.apk",
+    "sha256": "a98301c20d6d62dd278abb2ba855824f236685988b49e465965a5ddbe8a2b299",
+    "_note": "sha256 of lib/arm64-v8a/librustdesk.so inside that APK"
+  },
+  "bridge": {
+    "generatedFor": "1.4.9",
+    "source": "rustdesk CI 'bridge-artifact', run 30685634728",
+    "_note": [
+      "Committed at overlay/lib/generated_bridge*.dart. It declares one symbol",
+      "the 1.4.7 engine lacks (wire_session_set_common); patches/lib_common.patch",
+      "removes its only call site. sync-rustdesk.ps1 re-checks this every run."
+    ]
+  },
+  "neodesk": {
+    "buildNumber": 152,
+    "_note": "versionName comes from neodesk_core/lib/core/version.dart; keep this monotonic"
+  }
+}
