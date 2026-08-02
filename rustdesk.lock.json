@@ -27,7 +27,7 @@
     ]
   },
   "neodesk": {
-    "buildNumber": 153,
+    "buildNumber": 154,
     "_note": "versionName comes from neodesk_core/lib/core/version.dart; keep this monotonic"
   }
 }

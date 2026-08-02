@@ -137,7 +137,23 @@ class _RustdeskPeerRepository implements nd.PeerRepository {
   }
 
   @override
-  Future<void> forget(String id) => bind.mainRemovePeer(id: id);
+  Future<void> forget(String id) async {
+    await bind.mainRemovePeer(id: id);
+    // mainRemovePeer is only PeerConfig::remove — it drops the stored config
+    // but leaves the favourites list, which holds bare ids, untouched. Without
+    // this the id lingers and re-adding the same peer later silently comes back
+    // already favourited.
+    final favs = (await bind.mainGetFav()).toList();
+    if (favs.remove(id)) await bind.mainStoreFav(favs: favs);
+    // Nothing in the engine notifies the Peers models after a removal, so the
+    // streams — and the list on screen — would keep showing the deleted peer
+    // until the next app start. Reload to make them re-emit.
+    await Future.wait([
+      bind.mainLoadRecentPeers(),
+      bind.mainLoadFavPeers(),
+      bind.mainLoadLanPeers(),
+    ]);
+  }
 
   @override
   Future<void> setAlias(String id, String alias) async {

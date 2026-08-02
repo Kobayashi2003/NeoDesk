@@ -235,8 +235,13 @@ class FakePeerRepository implements PeerRepository {
       _favorites.add(_favorites.value.where((e) => e.id != id).toList());
 
   @override
-  Future<void> forget(String id) async =>
-      _recent.add(_recent.value.where((e) => e.id != id).toList());
+  Future<void> forget(String id) async {
+    // Deleting a peer drops it everywhere, favourites included — leaving it on
+    // the shelf would make the delete look half-applied.
+    _recent.add(_recent.value.where((e) => e.id != id).toList());
+    _favorites.add(_favorites.value.where((e) => e.id != id).toList());
+    _lan.add(_lan.value.where((e) => e.id != id).toList());
+  }
 
   @override
   Future<void> setAlias(String id, String alias) async {
