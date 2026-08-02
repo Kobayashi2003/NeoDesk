@@ -1,11 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Spotify-dark rounded tile -->
+  <!--
+    NeoDesk mark. The screen IS the logo: a lit display with the N knocked out
+    of it, so the letter reads as content on the remote machine rather than a
+    badge sitting on top of one.
+
+    The light wedge runs along the N's own diagonal — the screen is catching
+    light from off-frame, which is the whole point of the app. It is decoration
+    and meaning at once, and costs nothing at launcher sizes: the silhouette
+    stays a solid block, so the N survives down to 48px.
+  -->
+  <defs>
+    <clipPath id="screen">
+      <path d="M160 300 h704 a64 64 0 0 1 64 64 v320 a64 64 0 0 1 -64 64 h-704 a64 64 0 0 1 -64 -64 v-320 a64 64 0 0 1 64 -64 z"/>
+    </clipPath>
+    <linearGradient id="lit" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#45F585"/>
+      <stop offset="1" stop-color="#1ED760"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#12B14E"/>
+      <stop offset="1" stop-color="#0A7A38"/>
+    </linearGradient>
+  </defs>
+
   <rect width="1024" height="1024" rx="220" fill="#121212"/>
-  <!-- remote-desktop screen motif (RustDesk-ish), faint green -->
-  <rect x="226" y="298" width="572" height="404" rx="52" fill="none"
-        stroke="#1ED760" stroke-width="22" opacity="0.22"/>
-  <rect x="430" y="724" width="164" height="26" rx="13" fill="#1ED760" opacity="0.22"/>
-  <!-- bold "N" in Spotify green -->
-  <path d="M360,704 L360,320 L664,704 L664,320" fill="none" stroke="#1ED760"
-        stroke-width="88" stroke-linecap="square" stroke-linejoin="miter"/>
+
+  <g clip-path="url(#screen)">
+    <rect x="96" y="300" width="832" height="448" fill="url(#shade)"/>
+    <path d="M96 748 L96 300 L928 300 Z" fill="url(#lit)"/>
+  </g>
+
+  <!-- N as negative space, cut straight back to the tile colour -->
+  <path d="M296 656 V368 h74 l208 200 V368 h74 v288 h-74 L370 456 v200 z" fill="#121212"/>
+
+  <rect x="452" y="762" width="120" height="34" rx="17" fill="#1ED760" opacity="0.85"/>
 </svg>

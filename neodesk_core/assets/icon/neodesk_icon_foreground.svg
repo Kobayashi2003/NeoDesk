@@ -1,7 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- transparent background; mark kept inside the adaptive-icon safe zone -->
-  <rect x="312" y="356" width="400" height="296" rx="40" fill="none"
-        stroke="#1ED760" stroke-width="18" opacity="0.22"/>
-  <path d="M408,648 L408,372 L616,648 L616,372" fill="none" stroke="#1ED760"
-        stroke-width="66" stroke-linecap="square" stroke-linejoin="miter"/>
+  <!--
+    Adaptive-icon foreground: the same lit-screen mark with no tile behind it
+    (the launcher supplies #121212 as the background layer and may mask the
+    result to a circle, squircle, teardrop, …).
+
+    SAFE ZONE is the constraint here, not looks. Android gives a 108dp canvas of
+    which only the centre 66dp is guaranteed to survive masking — on this 1024
+    canvas that is a 626px circle. So the mark must fit a 626px DIAGONAL, not a
+    626px box. Screen 500x320 + 12 gap + 26 stand = 500x358, diagonal 615, and
+    the whole group is centred on (512,512). Re-check with:
+        magick neodesk_icon_foreground_1024.png -trim -format "%wx%h +%X+%Y" info:
+    Note the rounded corners push the outer bbox 44px past the `M` start point.
+  -->
+  <defs>
+    <clipPath id="screenFg">
+      <path d="M306 333 h412 a44 44 0 0 1 44 44 v232 a44 44 0 0 1 -44 44 h-412 a44 44 0 0 1 -44 -44 v-232 a44 44 0 0 1 44 -44 z"/>
+    </clipPath>
+    <linearGradient id="litFg" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#45F585"/>
+      <stop offset="1" stop-color="#1ED760"/>
+    </linearGradient>
+    <linearGradient id="shadeFg" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#12B14E"/>
+      <stop offset="1" stop-color="#0A7A38"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#screenFg)">
+    <rect x="262" y="333" width="500" height="320" fill="url(#shadeFg)"/>
+    <path d="M262 653 L262 333 L762 333 Z" fill="url(#litFg)"/>
+  </g>
+
+  <!--
+    The N is the master path from neodesk_icon.svg, uniformly scaled so the
+    letterform cannot drift between the two files. Cut to the tile colour, not
+    to transparency: a real hole would let the launcher background through and
+    the letter would disappear on a dark wallpaper.
+  -->
+  <g transform="translate(227.4,185.2) scale(0.6)">
+    <path d="M296 656 V368 h74 l208 200 V368 h74 v288 h-74 L370 456 v200 z" fill="#121212"/>
+  </g>
+
+  <rect x="466" y="665" width="92" height="26" rx="13" fill="#1ED760" opacity="0.85"/>
 </svg>
