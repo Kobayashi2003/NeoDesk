@@ -537,7 +537,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// A big top-level category header (大类, e.g. Control / Interface / Other).
+  /// A big top-level category header (Control / Interface / Other).
   /// Sits a rung above [_subsection]'s accent subheaders: larger, primary-text,
   /// mixed-case. The card(s) beneath it are emitted separately.
   Widget _category(String title) => Padding(

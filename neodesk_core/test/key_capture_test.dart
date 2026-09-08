@@ -28,7 +28,7 @@ void main() {
     });
 
     test('CJK still composing defers (no output, buffer must not advance)', () {
-      // Pinyin shown as a composing 汉字 before the user commits it.
+      // Pinyin shown as composing Han characters before the user commits it.
       final d = computeCaptureDelta('11111', '11111你', '你');
       expect(d.deferred, isTrue);
       expect(d.committed, isEmpty);

@@ -27,10 +27,11 @@ class KeyboardCaptureDelta {
   /// Text inserted since the last edit (buffer grew); empty otherwise.
   final String committed;
 
-  /// True while an IME is composing non-ASCII (e.g. pinyin → 汉字): nothing is
-  /// sent AND the tracked buffer must NOT advance, so the eventual commit diffs
-  /// against the pre-composition buffer and arrives as one finished, in-order
-  /// word. Callers keep their previous buffer value when this is set.
+  /// True while an IME is composing non-ASCII (e.g. pinyin to Han characters):
+  /// nothing is sent AND the tracked buffer must NOT advance, so the eventual
+  /// commit diffs against the pre-composition buffer and arrives as one
+  /// finished, in-order word. Callers keep their previous buffer value when
+  /// this is set.
   final bool deferred;
 
   /// Whether this edit produces no key output (but the buffer may still advance).
