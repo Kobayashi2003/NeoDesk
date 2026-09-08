@@ -281,24 +281,6 @@ const Map<String, String> _zh = {
   'Hold middle button': '长按中键',
   'Hold left button (drag to select / move)': '长按左键（拖动以选择 / 移动）',
   'Right click at the second finger': '在第二根手指处右键单击',
-  // Account (third-party sign-in only — the public server has passwords off)
-  'Account': '账号',
-  'Not signed in': '未登录',
-  'Required for remote-code connections': '使用远控码连接需要登录',
-  'RustDesk requires an account before connecting by remote code. '
-      'Direct IP connections work without one.':
-      'RustDesk 要求登录账号后才能通过远控码连接。直接使用 IP 连接则无需登录。',
-  'Continue with {}': '使用 {} 继续',
-  'Waiting for the browser…': '正在等待浏览器…',
-  'This server offers no sign-in providers, or it could not be '
-      'reached.': '该服务器未提供任何登录方式，或无法连接。',
-  'Your account is your provider identity — signing in the first '
-      'time creates it. There is nothing to register.':
-      '你的账号就是所选服务商的身份，首次登录即自动创建，无需另行注册。',
-  'Timed out waiting for authorization': '等待授权超时',
-  'Sign out': '退出登录',
-  'Signed in — remote-code connections are available.':
-      '已登录，可以使用远控码连接。',
 };
 
 const Map<String, String> _ja = {
@@ -537,22 +519,4 @@ const Map<String, String> _ja = {
   'Hold left button (drag to select / move)':
       '左ボタンを長押し（ドラッグで選択 / 移動）',
   'Right click at the second finger': '2 本目の指の位置で右クリック',
-  // Account (third-party sign-in only — the public server has passwords off)
-  'Account': 'アカウント',
-  'Not signed in': '未ログイン',
-  'Required for remote-code connections': 'リモートコード接続にはログインが必要',
-  'RustDesk requires an account before connecting by remote code. '
-      'Direct IP connections work without one.':
-      'RustDesk はリモートコードで接続する前にアカウントを要求します。IP 直接接続ならログインは不要です。',
-  'Continue with {}': '{} で続行',
-  'Waiting for the browser…': 'ブラウザを待っています…',
-  'This server offers no sign-in providers, or it could not be '
-      'reached.': 'このサーバーはログイン方法を提供していないか、接続できません。',
-  'Your account is your provider identity — signing in the first '
-      'time creates it. There is nothing to register.':
-      'アカウントは選んだプロバイダーの ID そのものです。初回ログインで自動的に作成されるため、別途登録は不要です。',
-  'Timed out waiting for authorization': '認証の待機がタイムアウトしました',
-  'Sign out': 'ログアウト',
-  'Signed in — remote-code connections are available.':
-      'ログイン済み — リモートコード接続が利用できます。',
 };

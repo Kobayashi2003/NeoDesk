@@ -173,26 +173,7 @@ should read as what the *app* needs, not as a wrapper around a `bind.*` call.
 
 ---
 
-## 6. Account sign-in — third-party only
-
-RustDesk's public server **has username/password login switched off**. It answers
-every attempt with *"Username/password login is not available on this server."*
-and serves no web console, so there is nothing to register either: the account
-*is* the Google / GitHub / Microsoft identity, created on first sign-in.
-
-So `AccountPort` offers only the provider flow. It is a **device-code style**
-flow — the engine opens the browser and polls the API server; nothing returns
-through a deep link, so no custom URL scheme or manifest entry is needed.
-
-Two asymmetries worth knowing, both already handled in the adapter:
-
-- OIDC: the **Rust side stores the access token** itself.
-- Username/password (self-hosted servers only, not implemented): the **Dart side
-  must store it** — `UserModel.login()` saves `user_info` but not the token.
-
----
-
-## 7. Conventions
+## 6. Conventions
 
 - **Do not commit, push, or publish unless asked in that message.**
 - Commit messages: English, short, no co-author or email trailers.

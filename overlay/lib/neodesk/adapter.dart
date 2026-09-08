@@ -27,7 +27,6 @@ import '../common.dart'
     show
         gFFI,
         isAndroid,
-        translate,
         AndroidPermissionManager,
         openMonitorInTheSameTab;
 import '../consts.dart'
@@ -42,7 +41,6 @@ import '../models/input_model.dart' show MouseButtons, InputModel;
 import '../models/model.dart';
 import '../models/peer_model.dart' show Peers, Peer;
 import '../models/platform_model.dart' show bind;
-import '../models/user_model.dart' show UserModel;
 
 part 'adapter/session.dart';
 part 'adapter/input.dart';
@@ -50,7 +48,6 @@ part 'adapter/frame.dart';
 part 'adapter/config.dart';
 part 'adapter/peers.dart';
 part 'adapter/files.dart';
-part 'adapter/account.dart';
 
 /// Composition root over `gFFI`.
 class RustdeskCore implements nd.NeodeskCore {
@@ -78,7 +75,6 @@ class RustdeskCore implements nd.NeodeskCore {
 
   final _RustdeskSessionFactory _factory;
   final _RustdeskFileTransferFactory _files;
-  final _RustdeskAccount _account = _RustdeskAccount();
   static const _pipChannel = MethodChannel('neodesk/pip');
   static const _volkeyChannel = MethodChannel('neodesk/volkey');
   final _pip = StreamController<bool>.broadcast();
@@ -95,9 +91,6 @@ class RustdeskCore implements nd.NeodeskCore {
 
   @override
   nd.FileTransferFactory get files => _files;
-
-  @override
-  nd.AccountPort get account => _account;
 
   @override
   Future<String?> scanQrCode(BuildContext context) => neodeskScanQr(context);

@@ -19,7 +19,6 @@ class FakeCore implements NeodeskCore {
   final FakeConfigStore _config;
   final FakeRemoteSessionFactory _sessions = FakeRemoteSessionFactory();
   final FakeFileTransferFactory _files = FakeFileTransferFactory();
-  final FakeAccount _account = FakeAccount();
 
   @override
   RemoteSessionFactory get sessions => _sessions;
@@ -32,9 +31,6 @@ class FakeCore implements NeodeskCore {
 
   @override
   FileTransferFactory get files => _files;
-
-  @override
-  AccountPort get account => _account;
 
   @override
   Future<String?> scanQrCode(BuildContext context) async => null;
@@ -137,76 +133,6 @@ const _sampleLan = <PeerEntry>[
   PeerEntry(
       id: '192.168.1.20', alias: 'NAS-Server', platform: 'Linux', online: true),
 ];
-
-/// In-memory account, so the sign-in screen can be built and clicked through
-/// without a server or a browser.
-///
-/// It mirrors the real flow's shape rather than short-circuiting it: a sign-in
-/// reports progress for a moment before completing, and can be cancelled, so
-/// the waiting and cancel paths are reachable in the demo.
-class FakeAccount implements AccountPort {
-  static const _providers = [
-    AuthProvider(id: 'google', label: 'Google'),
-    AuthProvider(id: 'github', label: 'GitHub'),
-    AuthProvider(id: 'microsoft', label: 'Microsoft'),
-  ];
-
-  final _users = StreamController<AccountUser?>.broadcast();
-  AccountUser? _current;
-  bool _cancelled = false;
-  bool _running = false;
-
-  @override
-  AccountUser? get current => _current;
-
-  @override
-  Stream<AccountUser?> get user async* {
-    yield _current;
-    yield* _users.stream;
-  }
-
-  @override
-  Future<List<AuthProvider>> providers() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _providers;
-  }
-
-  @override
-  Future<SignInOutcome> signInWith(
-    AuthProvider provider, {
-    void Function(String status)? onStatus,
-  }) async {
-    _cancelled = false;
-    _running = true;
-    try {
-      for (final step in ['Opening browser…', 'Waiting for authorization…']) {
-        onStatus?.call(step);
-        await Future.delayed(const Duration(milliseconds: 400));
-        if (_cancelled) return const SignInCancelled();
-      }
-      _emit(AccountUser(name: 'demo', displayName: 'Demo (${provider.label})'));
-      return SignInSucceeded(_current!);
-    } finally {
-      _running = false;
-    }
-  }
-
-  @override
-  Future<void> cancelSignIn() async {
-    if (_running) _cancelled = true;
-  }
-
-  @override
-  Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _emit(null);
-  }
-
-  void _emit(AccountUser? u) {
-    _current = u;
-    _users.add(u);
-  }
-}
 
 class FakePeerRepository implements PeerRepository {
   final _recent = Behaviorish<List<PeerEntry>>(List.of(_sampleRecent));
