@@ -57,9 +57,6 @@ run_*.txt
 *.apk
 **/build/
 
-# Design notes — local reference only (not published)
-/DESIGN.md
-
 # Build output (scripts/build.ps1)
 /dist/
 

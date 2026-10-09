@@ -105,7 +105,7 @@ This is why `rustdesk.lock.json` has **two** version fields: `rustdesk.tag`
    open the upstream file, re-cut the patch (§1). Never delete a patch to
    silence it.
 
-4. **Re-check the deviations table in `DESIGN.md`** — a deviation may have become
+4. **Re-check every `NEODESK DEVIATION` marker** — a deviation may have become
    unnecessary (upstream fixed it) or newly wrong.
 
 5. `.\scripts\build.ps1` and confirm the APK builds and the version is right.
@@ -180,5 +180,6 @@ should read as what the *app* needs, not as a wrapper around a `bind.*` call.
   the sync script stamps it into `pubspec.yaml`. Bump `neodesk.buildNumber` in
   `rustdesk.lock.json` monotonically or Android refuses the install.
 - Scripts are PowerShell (`.ps1`).
-- `DESIGN.md` is local-only (gitignored) and holds machine-specific setup, the
-  deviation table, and deeper design notes. This file holds the process.
+- `docs/` holds the code-structure map and the implemented / planned feature
+  lists, **in Chinese** (the one exception to English docs). Update them in the
+  same change as the code they describe. This file holds the process.

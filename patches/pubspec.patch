@@ -4,8 +4,8 @@
  # Read more about iOS versioning at
  # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
  # 1.1.9-1 works for android, but for ios it becomes 1.1.91, need to set it to 1.1.9-a.1 for iOS, will get 1.1.9.1, but iOS store not allow 4 numbers
-+# neodesk app version. Keep in lock-step with
-+# neodesk_core/lib/core/version.dart (kNeodeskVersion); bump the +build
++# neodesk app version, stamped by scripts/sync-rustdesk.ps1 from
++# neodesk_core/lib/core/version.dart and rustdesk.lock.json; keep the +build
 +# monotonically so installs never hit an Android version-downgrade.
  version: 1.4.9+67
  
@@ -28,7 +28,7 @@
 -  flutter_plugin_android_lifecycle: 2.0.17
 +  # Local copies patched to drop the removed v1-embedding registerWith(Registrar)
 +  # so they build on Flutter 3.44 (rustdesk 1.4.7 targeted 3.24.5). See
-+  # flutter/plugin_overrides/ and docs in neodesk_adapter.
++  # overlay/plugin_overrides/.
 +  flutter_plugin_android_lifecycle:
 +    path: plugin_overrides/flutter_plugin_android_lifecycle
 +  device_info:

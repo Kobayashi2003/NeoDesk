@@ -36,6 +36,12 @@ the engine (`librustdesk.so`) is taken from RustDesk's official release APK.
 `rustdesk/` is generated from upstream RustDesk plus `overlay/` and `patches/`;
 see [AGENTS.md](AGENTS.md).
 
+## Docs (Chinese)
+
+- [代码结构](docs/代码结构.md) — file tree with each file's role
+- [已实现功能](docs/已实现功能.md) — implemented features
+- [拟实现功能](docs/拟实现功能.md) — planned work and verification debt
+
 ## What I wrote
 
 The UI and gesture system (`neodesk_core/`), and the adapter and launcher that
