@@ -7,7 +7,7 @@ import '../session_controller.dart';
 /// Auxiliary scroll control: a small thumb on the right edge that you pull up or
 /// down to scroll. Drag distance accumulates into wheel notches (respecting the
 /// scroll speed + invert settings); the thumb follows your finger within a short
-/// track and springs back to centre on release. See DESIGN.md §4.5.
+/// track and springs back to centre on release.
 class ScrollStrip extends StatefulWidget {
   const ScrollStrip({super.key, required this.controller, required this.bounds});
 
@@ -25,17 +25,12 @@ class _ScrollStripState extends State<ScrollStrip> {
   static const double _thumbH = 52;
   static const double _range = (_trackH - _thumbH) / 2;
 
-  double _accum = 0;
+  late final _scroller = DragScroller(widget.controller);
   double _offset = 0; // thumb displacement from centre
   bool _dragging = false;
 
   void _onUpdate(DragUpdateDetails d) {
-    _accum += d.delta.dy;
-    final step = widget.controller.scrollStep;
-    while (_accum.abs() >= step) {
-      widget.controller.scrollBy(_accum > 0 ? -1 : 1);
-      _accum += _accum > 0 ? -step : step;
-    }
+    _scroller.add(d.delta.dy);
     setState(() => _offset = (_offset + d.delta.dy).clamp(-_range, _range));
   }
 
@@ -50,7 +45,7 @@ class _ScrollStripState extends State<ScrollStrip> {
       top: top,
       child: GestureDetector(
         onVerticalDragStart: (_) {
-          _accum = 0;
+          _scroller.reset();
           setState(() => _dragging = true);
         },
         onVerticalDragUpdate: _onUpdate,

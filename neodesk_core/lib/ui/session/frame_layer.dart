@@ -4,10 +4,8 @@ import '../theme/app_colors.dart';
 import 'frame_override.dart';
 import 'session_controller.dart';
 
-/// Renders the remote frame. In the real app this is the [FrameSource]-backed
-/// Texture/RGBA widget (the perf-critical path we must NOT rewrite — see
-/// DESIGN.md §0). Here it's a placeholder "fake desktop" so the gesture /
-/// transform plumbing is visible and testable.
+/// Renders the remote frame: the engine's own render widget when
+/// [neodeskFrameOverride] is set, else a placeholder desktop for the demo.
 class FrameLayer extends StatelessWidget {
   const FrameLayer({super.key, required this.controller});
 
@@ -15,7 +13,6 @@ class FrameLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Real-engine integration injects the actual render widget here.
     final override = neodeskFrameOverride;
     if (override != null) return override(context);
 

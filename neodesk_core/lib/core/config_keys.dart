@@ -1,14 +1,10 @@
-/// Central registry of every [ConfigStore] key the UI reads or writes.
-///
-/// Single source of truth: previously some keys were declared as constants in
-/// `settings_page.dart` *and* re-typed as raw string literals in
-/// `session_controller.dart`, so a rename in one place silently broke the other.
-/// Everything now references [ConfigKeys] instead.
+/// Every [ConfigStore] key the UI reads or writes. Never spell a key inline.
 abstract final class ConfigKeys {
   /// Interaction mode a new session opens in (`touch` / `pointer`).
   static const defaultMode = 'neodesk.mode.default';
 
-  /// Invert wheel-scroll direction (bool).
+  /// Invert the direction of drag-driven scrolling (bool). Buttons that name a
+  /// direction, such as a volume key bound to Scroll up, ignore it.
   static const scrollInvert = 'neodesk.scrollinvert';
 
   /// Hide the remote cursor while in Touch mode (bool; default on). In Pointer

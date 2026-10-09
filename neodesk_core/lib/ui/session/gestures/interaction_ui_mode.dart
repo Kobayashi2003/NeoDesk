@@ -1,9 +1,6 @@
 import 'package:neodesk_core/neodesk_core.dart' show tr;
 
-/// The UI-level operation modes. See DESIGN.md.
-///
-/// A *UI* concept that does not change lib/core — each value decides which
-/// `InputSink` primitives a gesture produces (absolute vs relative).
+/// How touches drive the remote pointer: absolute or relative.
 enum InteractionUiMode {
   /// Absolute positioning: the finger's landing point is where you click.
   touch,

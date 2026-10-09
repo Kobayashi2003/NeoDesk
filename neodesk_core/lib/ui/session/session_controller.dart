@@ -17,7 +17,7 @@ import 'gestures/interaction_ui_mode.dart';
 ///
 /// All screen<->image conversion goes through [view] (a [CanvasView] built from
 /// the live transform), so taps/moves land on the correct remote pixel under any
-/// zoom/pan. See DESIGN.md §1 / §5.
+/// zoom/pan.
 class SessionController extends ChangeNotifier {
   SessionController({
     required this.core,
@@ -41,10 +41,9 @@ class SessionController extends ChangeNotifier {
     scrollStripVisible = core.config.getBool(ConfigKeys.scrollStrip);
     mousePanel =
         core.config.getBool(ConfigKeys.keyMousePanel, defaultValue: true);
-    edgePanSpeed = _readEdgePanSpeed();
+    edgePanSpeed = edgePanSpeedFrom(core.config.get(ConfigKeys.edgePanSpeed));
     qualityMonitorDetailed =
         core.config.get(ConfigKeys.qualityMonitorDetail) == 'detailed';
-    currentDisplay = 0;
     _phaseSub = session.phase.listen((p) {
       phase = p;
       if (p == SessionPhase.connected) {
@@ -94,9 +93,8 @@ class SessionController extends ChangeNotifier {
   /// Auxiliary vertical scroll strip (a pull-up/down bar) shown in-session.
   bool scrollStripVisible = false;
 
-  /// The keyboard has two independent, separately-summonable surfaces: the
-  /// system/ordinary keyboard (invisible IME capture) and the special-keys
-  /// panel. Either or both may be shown.
+  /// Keyboard surfaces, each toggled independently: the system IME, the special
+  /// keys, the shortcut combos and the mouse buttons.
   bool systemKeyboard = false;
   bool specialKeyboard = false;
   bool combosKeyboard = false;
@@ -113,14 +111,14 @@ class SessionController extends ChangeNotifier {
   /// at identity there and is only mutated on the FakeCore path.
   CanvasTransform canvas = const CanvasTransform();
 
-  /// Customisable gesture bindings (DESIGN.md §2.1 / §3.4).
+  /// Customisable gesture bindings.
   late GestureMap gestureMap;
 
   /// Recognition thresholds for the gesture state machine (long-press time,
   /// slops, early-tap…). Read once at session start; edited in Settings.
   late GestureTuning gestureTuning;
 
-  /// Settings mirrored from [ConfigStore].
+  /// Flips drag-driven scrolling only; see [DragScroller].
   bool scrollInvert = false;
 
   /// Whether the remote cursor is hidden while in Touch mode (default on). In
@@ -139,7 +137,7 @@ class SessionController extends ChangeNotifier {
   int currentDisplay = 0;
 
   /// Virtual cursor position in **image** coordinates (the source of truth for
-  /// both modes). Rendered at [cursorScreen]. See §3.1.
+  /// both modes). Rendered at [cursorScreen].
   Offset cursorImage = Offset.zero;
   Size viewport = Size.zero;
   bool _disposed = false;
@@ -155,7 +153,6 @@ class SessionController extends ChangeNotifier {
   StreamSubscription? _peerSub;
   StreamSubscription? _qualitySub;
   StreamSubscription? _pipSub;
-
 
   /// Auto-reconnect state. [reconnecting] is true while retrying after an
   /// unexpected drop; [reconnectAttempt] is the current attempt (1.._maxReconnect).
@@ -182,9 +179,6 @@ class SessionController extends ChangeNotifier {
 
   double _readDouble(String key, double fallback) =>
       double.tryParse(core.config.get(key)) ?? fallback;
-
-  double _readEdgePanSpeed() =>
-      edgePanSpeedFrom(core.config.get(ConfigKeys.edgePanSpeed));
 
   // --- Coordinate model ------------------------------------------------------
 
@@ -245,7 +239,7 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Dispatches a discrete gesture's mapped [GestureAction] (DESIGN.md §4).
+  /// Dispatches a discrete gesture's mapped [GestureAction].
   void performGesture(GestureAction action) {
     switch (action) {
       case GestureAction.none:
@@ -294,12 +288,9 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Invert-scroll and hide-cursor-in-Touch are persistent preferences set in
-  // Settings (not in-session quick toggles), so no live togglers live here — the
-  // values are read from config at session start.
-
-  /// Wheel-scroll by [notches] (used by the scroll strip). Positive = down.
-  void scrollBy(int notches) => input.scroll(wheelDir(notches));
+  /// Sends [notches] as-is; positive scrolls up (the engine's convention).
+  /// [scrollInvert] does not apply: use this for controls that name a direction.
+  void wheel(int notches) => input.scroll(notches);
 
   /// Toggle the system/ordinary keyboard. The toolbar button opens the ordinary
   /// keyboard first; a gesture can also be bound to `toggleKeyboard`.
@@ -336,7 +327,7 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// How long chrome stays up before auto-hiding (DESIGN.md §5.5).
+  /// How long chrome stays up before auto-hiding.
   static const _kChromeAutoHide = Duration(milliseconds: 2500);
 
   /// Edge auto-pan tick (~60 fps) while the cursor sits against a viewport edge.
@@ -405,7 +396,7 @@ class SessionController extends ChangeNotifier {
   }
 
   /// Touch mode: place the cursor under the touched point (absolute). Real engine
-  /// routes through `CursorModel.move`; FakeCore maps screen->image locally. §1.1.
+  /// routes through `CursorModel.move`; FakeCore maps screen->image locally.
   void cursorTo(Offset screen) {
     final c = neodeskCursorOverride;
     if (c != null) {
@@ -515,7 +506,7 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Toolbar: 100% (native pixel) zoom, centred (§4).
+  /// Toolbar: 100% (native pixel) zoom, centred.
   void nativeCanvas() {
     final v = view;
     if (v.isValid) {
@@ -523,7 +514,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  // --- Pointer-mode edge auto-pan (§3.3) -------------------------------------
+  // --- Pointer-mode edge auto-pan -------------------------------------
 
   /// Begin a Pointer-mode one-finger drag: arms the edge auto-pan ticker. Only
   /// for the FakeCore demo — the real engine edge-pans inside `CursorModel`.
@@ -614,8 +605,6 @@ class SessionController extends ChangeNotifier {
   }
 
   // --- Misc ------------------------------------------------------------------
-
-  int wheelDir(int raw) => scrollInvert ? -raw : raw;
 
   void setDisplay(int index) {
     if (currentDisplay == index) return;
@@ -805,5 +794,28 @@ class SessionController extends ChangeNotifier {
     _qualitySub?.cancel();
     _pipSub?.cancel();
     super.dispose();
+  }
+}
+
+/// Turns vertical drag distance into wheel notches, one per
+/// [SessionController.scrollStep] px. Dragging down scrolls down unless
+/// [SessionController.scrollInvert] is on.
+class DragScroller {
+  DragScroller(this._c);
+
+  final SessionController _c;
+  double _accum = 0;
+
+  void reset() => _accum = 0;
+
+  void add(double dy) {
+    final step = _c.scrollStep;
+    if (step <= 0) return;
+    _accum += dy;
+    while (_accum.abs() >= step) {
+      final down = _accum > 0;
+      _c.wheel(down != _c.scrollInvert ? -1 : 1);
+      _accum += down ? -step : step;
+    }
   }
 }

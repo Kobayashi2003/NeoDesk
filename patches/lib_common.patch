@@ -45,9 +45,9 @@
 -    );
 -    return;
 -  }
-+  // NEODESK DEVIATION from vendored upstream (see DESIGN.md §3.3/§3.4):
++  // NEODESK DEVIATION from upstream:
 +  // 1.4.9's dedicated 'insecure-connection' dialog is removed. It is the only
-+  // caller of bind.sessionSetCommon, which the vendored 1.4.7 librustdesk.so
++  // caller of bind.sessionSetCommon, which the prebuilt 1.4.7 librustdesk.so
 +  // does not export — keeping it would crash at runtime on a non-E2EE peer.
 +  // Falls through to the generic msgBox path, i.e. 1.4.7's behaviour.
 +  // Re-evaluate when the prebuilt engine is rebuilt at >= 1.4.9.

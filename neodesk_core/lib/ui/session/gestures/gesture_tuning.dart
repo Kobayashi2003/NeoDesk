@@ -7,7 +7,7 @@ import 'package:neodesk_core/neodesk_core.dart';
 ///
 /// Persisted as JSON in [ConfigStore] (key [ConfigKeys.gestureTuning]) and read
 /// once per session; the Gesture-sensitivity settings page edits them live with a
-/// test area. See DESIGN.md §4.2.
+/// test area.
 @immutable
 class GestureTuning {
   const GestureTuning({

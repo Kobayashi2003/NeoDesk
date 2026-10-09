@@ -4,12 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:neodesk_core/neodesk_core.dart';
 
-/// In-memory implementation of every core port, backed by sample data.
-///
-/// This is NOT the RustDesk adapter — it exists so the new UI/gesture layer
-/// (lib/ui) can be developed, run and tested standalone, with no native engine
-/// or Rust toolchain present. The real app swaps in `RustdeskCore`
-/// (rustdesk/lib/neodesk/adapter.dart) and the UI is unchanged.
+/// In-memory implementation of every core port, backed by sample data, so the
+/// UI runs and tests without the engine. The real app uses `RustdeskCore`
+/// (`overlay/lib/neodesk/adapter.dart`).
 class FakeCore implements NeodeskCore {
   FakeCore()
       : _peers = FakePeerRepository(),
@@ -246,8 +243,7 @@ class FakeRemoteSession implements RemoteSession {
     String? password,
     bool forceRelay = false,
   }) async {
-    // Simulate the RustDesk handshake cadence so the phase->UI state machine
-    // (DESIGN.md §5.6) is exercised end to end.
+    // Walk through every phase the engine reports, so the UI shows each one.
     _phase.add(SessionPhase.connecting);
     await Future.delayed(const Duration(milliseconds: 700));
     _phase.add(SessionPhase.authenticating);

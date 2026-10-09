@@ -10,7 +10,7 @@ import '../theme/dimens.dart';
 /// Two-pane file transfer (This device / Remote tabs) driving the [FileTransfer]
 /// port. Browse either side, transfer (download/upload), manage files (new
 /// folder / rename / delete), multi-select for batch actions, and watch/cancel
-/// jobs at the bottom. See DESIGN.md §4.6.
+/// jobs at the bottom.
 class FileTransferPage extends StatefulWidget {
   const FileTransferPage({super.key, required this.core, required this.peerId});
 

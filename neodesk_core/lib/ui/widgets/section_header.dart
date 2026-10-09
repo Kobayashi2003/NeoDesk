@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_typography.dart';
 import '../theme/dimens.dart';
 
-/// Bold section title with optional trailing action. See DESIGN.md §4.1.
+/// Bold section title with optional trailing action.
 class SectionHeader extends StatelessWidget {
   const SectionHeader({super.key, required this.title, this.trailing});
 

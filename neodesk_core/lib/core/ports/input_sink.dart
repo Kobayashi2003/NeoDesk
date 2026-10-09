@@ -28,7 +28,8 @@ abstract interface class InputSink {
   /// `InputModel.sendMobileRelativeMouseMove(dx, dy)`.
   Future<void> moveBy(double dx, double dy);
 
-  /// Vertical wheel. Wraps `InputModel.scroll(y)`.
+  /// Vertical wheel, [y] notches; positive scrolls up. Wraps
+  /// `InputModel.scroll(y)`.
   Future<void> scroll(int y);
 
   // --- Keyboard ---------------------------------------------------------

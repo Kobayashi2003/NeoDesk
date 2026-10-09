@@ -14,7 +14,7 @@ enum LongPressOutcome { ignored, fired, holding }
 /// [GestureSlot] fired, plus the geometry); the sink decides what to *do* — in a
 /// real session that's cursor/click/scroll via the controller (mode-aware), in
 /// the settings test area it's just a readout. This split lets both reuse the
-/// exact same recognition logic. See DESIGN.md §4.2.
+/// exact same recognition logic.
 abstract class GestureSink {
   /// The first finger of a gesture touched down.
   void gestureStart() {}
@@ -47,7 +47,7 @@ abstract class GestureSink {
 /// Raw-pointer gesture state machine, shared by Touch and Pointer modes (the mode
 /// difference — absolute vs relative cursor, edge-pan — lives entirely in the
 /// [GestureSink], so this recognition logic is written once). Fed pointer events
-/// by a [Listener]; emits decisions to [sink]. See DESIGN.md §4.2.
+/// by a [Listener]; emits decisions to [sink].
 ///
 /// A touch sequence has two deadlines, both measured from the first finger's
 /// touch-down:

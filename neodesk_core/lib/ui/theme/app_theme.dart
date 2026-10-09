@@ -4,7 +4,7 @@ import 'app_colors.dart';
 import 'app_typography.dart';
 import 'dimens.dart';
 
-/// Assembles the global [ThemeData] for either brightness. See DESIGN.md §7.
+/// Assembles the global [ThemeData] for either brightness.
 ///
 /// Colours come from [AppColors], which forwards to the palette selected by
 /// `appBrightness`; callers build with the same brightness that is currently

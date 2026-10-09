@@ -3,6 +3,7 @@
 #   .\scripts\build.ps1 [debug|release] [-SkipTests]
 #     Mode       debug (fast, ~75 MB) | release (R8-minified, ~25 MB; default)
 #     -SkipTests build without running analyze/tests
+#     -SkipSync  reuse the existing rustdesk/ instead of regenerating it
 #   Output: dist\neodesk-<version>.apk  (or neodesk-debug-<version>.apk)
 #
 # Requirements (read from your environment; missing ones fail fast):
@@ -22,7 +23,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 # --- rustdesk/ is generated, not vendored ------------------------------------
 # It may be absent (fresh clone) or stale (overlay/patches edited since the last
-# sync), so rebuild it unless explicitly told not to. See CLAUDE.md.
+# sync), so rebuild it unless told not to.
 if (-not $SkipSync) {
   & (Join-Path $PSScriptRoot 'sync-rustdesk.ps1')
   if ($LASTEXITCODE -ne 0) { throw 'sync-rustdesk failed' }
@@ -48,7 +49,7 @@ $flutterVer = (& flutter --version 2>&1 | Select-Object -First 1) -replace '^Flu
 if ($flutterVer -ne $wantFlutter) {
   throw @"
 wrong Flutter: found $flutterVer at $((Get-Command flutter).Source), need $wantFlutter.
-Set `$env:FLUTTER_HOME to the $wantFlutter SDK (this machine: D:\Program\flutter_3245).
+Set `$env:FLUTTER_HOME to the $wantFlutter SDK.
 "@
 }
 

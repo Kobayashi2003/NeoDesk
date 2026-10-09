@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 
 /// One brightness' worth of the neodesk colour set. Widgets read through
 /// [AppColors] (the active palette); theme builders that must produce a theme for
-/// a *specific* brightness use [paletteFor]. See DESIGN.md §2.1.
+/// a *specific* brightness use [paletteFor].
 class NeodeskPalette {
   const NeodeskPalette({
     required this.bgBase,

@@ -3,7 +3,7 @@
     "Pins everything scripts/sync-rustdesk.ps1 pulls from outside this repo.",
     "rustdesk.tag is the SOURCE version (Dart/Android); engine.tag is the",
     "PREBUILT ENGINE version. They are allowed to differ - and currently do -",
-    "because the engine ships as a binary we do not build. Read CLAUDE.md",
+    "because the engine ships as a binary we do not build. Read AGENTS.md",
     "before changing either: the bridge in overlay/lib/ is generated from the",
     "engine's Rust source and must agree with engine.tag, not rustdesk.tag."
   ],
@@ -27,7 +27,7 @@
     ]
   },
   "neodesk": {
-    "buildNumber": 155,
+    "buildNumber": 156,
     "_note": "versionName comes from neodesk_core/lib/core/version.dart; keep this monotonic"
   }
 }

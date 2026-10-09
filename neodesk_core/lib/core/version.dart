@@ -1,7 +1,3 @@
-/// The neodesk app version.
-///
-/// Keep in lock-step with `rustdesk/pubspec.yaml`'s `version:` (keep its `+build`
-/// number monotonically increasing so installs never hit an Android
-/// version-downgrade). This constant is the single source of truth shown in
-/// Settings → About.
-const String kNeodeskVersion = '1.14.2';
+/// The app version name; the sync script stamps it into `rustdesk/pubspec.yaml`
+/// with the build number from `rustdesk.lock.json`.
+const String kNeodeskVersion = '1.14.3';

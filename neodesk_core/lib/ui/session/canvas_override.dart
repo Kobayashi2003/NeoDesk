@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// Live read+write access to the remote canvas transform (pan / zoom), so the
 /// gesture layer can convert screen<->image coordinates correctly under any
-/// zoom/pan and drive navigation. See DESIGN.md §1 / §5.
+/// zoom/pan and drive navigation.
 ///
 /// When null, the gesture layer reads/writes the demo's local
 /// [SessionController.canvas] (FakeCore). The real app sets this to a control

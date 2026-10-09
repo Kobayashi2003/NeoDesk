@@ -14,7 +14,6 @@ import '../widgets/pill_button.dart';
 import '../widgets/section_header.dart';
 
 /// Home tab: connect bar + favourites shelf + recent list + lan.
-/// See DESIGN.md §4.1.
 class DevicesPage extends StatefulWidget {
   const DevicesPage({super.key, required this.core});
 

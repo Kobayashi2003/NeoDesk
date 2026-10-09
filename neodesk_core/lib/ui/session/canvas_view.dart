@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 /// Immutable snapshot of the live canvas transform, plus the only correct
-/// screen<->image coordinate mappings. See DESIGN.md §1 / §5.
+/// screen<->image coordinate mappings.
 ///
 /// Every gesture that needs a remote coordinate MUST go through this — never
 /// assume `screen == image`. Built fresh each gesture frame from either the
@@ -47,12 +47,12 @@ class CanvasView {
   /// Image point -> screen point.
   Offset imageToScreen(Offset p) => Offset(ox + p.dx * s, oy + p.dy * s);
 
-  /// Fit scale: whole image visible. Lower bound for zoom (§1.2).
+  /// Fit scale: whole image visible. Lower bound for zoom.
   double get fitScale =>
       (w <= 0 || h <= 0 || vw <= 0 || vh <= 0) ? 1.0 : math.min(vw / w, vh / h);
 
   /// Clamp a candidate offset so the image always fills (or is centred in) the
-  /// viewport and can't be flung off-screen (§1.4). Returns the clamped offset
+  /// viewport and can't be flung off-screen. Returns the clamped offset
   /// for the given [scale].
   Offset clampOffset(double nox, double noy, double scale) {
     final iw = w * scale;

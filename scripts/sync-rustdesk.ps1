@@ -14,7 +14,7 @@
 
       4. lib/generated_bridge*.dart  - committed under overlay/ (irreplaceable,
                                        tiny, and NOT generatable without a Rust
-                                       toolchain; see CLAUDE.md)
+                                       toolchain; see AGENTS.md)
       5. librustdesk.so              - extracted from the official release APK,
                                        which never expires, unlike CI artifacts
 
@@ -23,7 +23,7 @@
 
 .PARAMETER Tag
     Upstream tag to sync. Defaults to the pinned value in rustdesk.lock.json.
-    Passing something else is how you START an engine upgrade — read CLAUDE.md
+    Passing something else is how you START an upgrade - read AGENTS.md
     first, because the bridge and the .so must move together.
 
 .PARAMETER SkipEngine
@@ -131,7 +131,8 @@ patch '$($p.Name)' did not apply to rustdesk $Tag.
 git said: $out
 
 That is the intended failure: upstream changed a file we modify, so the change
-needs a human (or Claude) to look at it. See CLAUDE.md -> "When upstream
+
+
 changes". Do NOT delete the patch to make this go away.
 "@
     }
@@ -240,7 +241,7 @@ $extra = @($bridgeFns | Where-Object { $soFns -notcontains $_ })
 if ($extra.Count -gt 0) {
     Write-Host "    NOTE: bridge declares $($extra.Count) symbol(s) the engine lacks:" -ForegroundColor Yellow
     $extra | ForEach-Object { Write-Host "      $_" -ForegroundColor Yellow }
-    Write-Host "    Harmless only while nothing CALLS them - see CLAUDE.md." -ForegroundColor Yellow
+    Write-Host "    Harmless only while nothing CALLS them - see AGENTS.md." -ForegroundColor Yellow
 }
 Ok "$($bridgeFns.Count) bridge symbols, $($soFns.Count) engine symbols"
 

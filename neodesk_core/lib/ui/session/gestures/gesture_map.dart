@@ -7,7 +7,7 @@ import 'interaction_ui_mode.dart';
 
 /// What a gesture does. Click-type outcomes go to the peer as mouse buttons; the
 /// rest are UI/session actions. Zoom is produced only by the pinch slot and is
-/// **not** remappable (see [GestureMap.editableSlots]). See DESIGN.md §4.
+/// **not** remappable (see [GestureMap.editableSlots]).
 enum GestureAction {
   // Discrete (fired once on a tap / long-press).
   none,
@@ -116,7 +116,7 @@ extension GestureSlotX on GestureSlot {
 ///
 /// Both [InteractionUiMode.touch] and [InteractionUiMode.pointer] are
 /// configurable. Persisted as JSON in `ConfigStore` (key [storageKey]) — kept
-/// out of the native fast path. See DESIGN.md §4.
+/// out of the native fast path.
 class GestureMap {
   GestureMap(this._m);
 

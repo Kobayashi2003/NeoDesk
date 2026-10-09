@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Small online/offline indicator dot. See DESIGN.md §4.1.
+/// Small online/offline indicator dot.
 class StatusDot extends StatelessWidget {
   const StatusDot({super.key, required this.online, this.size = 9});
 

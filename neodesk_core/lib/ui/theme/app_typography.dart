@@ -16,11 +16,8 @@ const double kTextScaleMin = 0.8, kTextScaleMax = 1.6;
 void applyTextScale(String setting) => appTextScale.value =
     (double.tryParse(setting) ?? 1.0).clamp(kTextScaleMin, kTextScaleMax);
 
-/// Type scale. See DESIGN.md §2.2.
-///
-/// Decision (DESIGN §9): use the system font, recover the Spotify feel through
-/// weight / spacing. `fontFamily` is left null so each platform uses its
-/// default; swap in 'Inter' / 'Montserrat' here later without touching callers.
+/// Type scale. Uses the platform font (`fontFamily` null); the look comes from
+/// weight and spacing.
 class AppTypography {
   AppTypography._();
 

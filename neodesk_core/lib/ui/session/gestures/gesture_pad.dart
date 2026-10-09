@@ -49,11 +49,11 @@ class _GesturePadState extends State<GesturePad> {
 /// diverge: Touch places the cursor absolutely ([SessionController.cursorTo]),
 /// Pointer moves it relatively ([SessionController.moveCursorBy]) with edge-pan.
 class _SessionSink extends GestureSink {
-  _SessionSink(this._c);
+  _SessionSink(this._c) : _scroller = DragScroller(_c);
 
   final SessionController _c;
+  final DragScroller _scroller;
   MouseButton _heldButton = MouseButton.left;
-  double _scrollAccum = 0;
   bool _dragArmed = false;
 
   bool get _touch => _c.mode == InteractionUiMode.touch;
@@ -136,7 +136,7 @@ class _SessionSink extends GestureSink {
       case GestureAction.zoomCanvas:
         _c.transformCanvas(zoom: zoom, focal: focal);
       case GestureAction.scrollWheel:
-        _accumScroll(delta.dy);
+        _scroller.add(delta.dy);
       default:
         break;
     }
@@ -166,15 +166,6 @@ class _SessionSink extends GestureSink {
       _dragArmed = false;
       _c.endPointerDrag();
     }
-    _scrollAccum = 0;
-  }
-
-  void _accumScroll(double dy) {
-    _scrollAccum += dy;
-    final step = _c.scrollStep;
-    while (_scrollAccum.abs() >= step) {
-      _c.input.scroll(_c.wheelDir(_scrollAccum > 0 ? -1 : 1));
-      _scrollAccum += _scrollAccum > 0 ? -step : step;
-    }
+    _scroller.reset();
   }
 }

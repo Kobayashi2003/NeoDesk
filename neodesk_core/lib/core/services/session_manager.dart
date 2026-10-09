@@ -7,12 +7,8 @@ import '../ports/input_sink.dart';
 import '../ports/peer_repository.dart';
 import '../ports/remote_session.dart';
 
-/// Top-level composition root for the core layer.
-///
-/// Bundles the ports a remote-control screen needs. The UI depends on this
-/// single object and never reaches into the native engine directly. Concrete
-/// implementations: `FakeCore` (lib/ui/demo, in-memory) for the standalone demo,
-/// and `RustdeskCore` (rustdesk/lib/neodesk/adapter.dart) bound to the engine.
+/// Everything the UI needs from the platform and engine. Implemented by
+/// `FakeCore` (`lib/ui/demo`) and `RustdeskCore` (`overlay/lib/neodesk/adapter.dart`).
 abstract interface class NeodeskCore {
   RemoteSessionFactory get sessions;
   ConfigStore get config;

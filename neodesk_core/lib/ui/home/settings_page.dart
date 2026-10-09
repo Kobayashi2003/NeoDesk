@@ -17,7 +17,6 @@ typedef _Option = ({String label, String value, String? sub});
 /// "Settings" tab. Every control here is read back by a live session
 /// ([SessionController] / [RemoteSessionPage]) — choices persist to
 /// [ConfigStore] under a [ConfigKeys] key and apply to the next session opened.
-/// See DESIGN.md §4.3.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.core});
 
@@ -354,7 +353,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // Two-level grouping: three big categories — Control (how you drive
           // the remote), Interface (how the app looks/reads), and Other (app-
           // level). Control is subdivided into Interaction, Pointer & scrolling,
-          // and Keyboard. See DESIGN.md §6.4.
+          // and Keyboard.
           _category('Control'),
           _subsection('Interaction', [
             _row(Icons.touch_app, 'Default mode',

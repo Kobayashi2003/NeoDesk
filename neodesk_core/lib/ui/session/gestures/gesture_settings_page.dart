@@ -7,10 +7,7 @@ import '../../theme/dimens.dart';
 import 'gesture_map.dart';
 import 'interaction_ui_mode.dart';
 
-/// Lets the user remap discrete gestures → actions, per mode, persisting the
-/// [GestureMap] to [ConfigStore] as JSON. See DESIGN.md.
-///
-/// Changes apply to the next session opened.
+/// Remaps gestures to actions per mode. Changes apply to the next session.
 class GestureSettingsPage extends StatefulWidget {
   const GestureSettingsPage({super.key, required this.config});
 

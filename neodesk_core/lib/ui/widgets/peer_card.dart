@@ -24,7 +24,7 @@ import 'status_dot.dart';
   ); // windows
 }
 
-/// A row item for the recent / lan device lists. See DESIGN.md §4.1.
+/// A row item for the recent / lan device lists.
 class PeerListTile extends StatefulWidget {
   const PeerListTile({
     super.key,
@@ -111,7 +111,7 @@ class _PeerListTileState extends State<PeerListTile> {
   }
 }
 
-/// A square-ish card for the horizontal "favourites" shelf. See §4.1.
+/// A square-ish card for the horizontal "favourites" shelf.
 ///
 /// Carries a platform-tinted frame and a star badge so a favourited host reads
 /// as distinct from the plain recent rows; long-press opens [onMenu].

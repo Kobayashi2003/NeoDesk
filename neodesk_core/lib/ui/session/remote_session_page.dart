@@ -21,7 +21,7 @@ import 'keyboard/remote_keyboard.dart';
 import 'session_controller.dart';
 
 /// Full-screen remote-control screen. Owns the [SessionController], drives the
-/// phase→UI state machine (DESIGN.md §5.6) and composes the layers.
+/// phase→UI state machine and composes the layers.
 class RemoteSessionPage extends StatefulWidget {
   const RemoteSessionPage({
     super.key,
@@ -117,9 +117,9 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
     if (action != 'scrollUp' && action != 'scrollDown') _heldVol.add(action);
     switch (action) {
       case 'scrollUp':
-        _c.scrollBy(-1);
+        _c.wheel(1);
       case 'scrollDown':
-        _c.scrollBy(1);
+        _c.wheel(-1);
       case 'left':
         input.pointerDown(MouseButton.left);
       case 'right':
@@ -413,7 +413,7 @@ class _RemoteSessionPageState extends State<RemoteSessionPage> {
 }
 
 /// Demo-only HUD that shows the last few [InputSink] calls, so the gesture→
-/// primitive mapping (DESIGN.md) can be verified at a glance.
+/// primitive mapping can be verified at a glance.
 class _InputHud extends StatelessWidget {
   const _InputHud({required this.sink});
 

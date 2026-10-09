@@ -6,12 +6,9 @@ import 'ui/home/home_shell.dart';
 import 'ui/theme/app_theme.dart';
 import 'ui/theme/app_typography.dart';
 
-void main() {
-  // Stage 1 runs on the in-memory FakeCore so the UI/gesture layer works with
-  // no native engine. Swap in the real RustDesk adapter here later (docs §8).
-  final NeodeskCore core = FakeCore();
-  runApp(NeodeskApp(core: core));
-}
+/// Standalone demo on [FakeCore]. The real app starts from
+/// `overlay/lib/neodesk/launcher.dart` with the engine adapter.
+void main() => runApp(NeodeskApp(core: FakeCore()));
 
 class NeodeskApp extends StatelessWidget {
   const NeodeskApp({super.key, required this.core});

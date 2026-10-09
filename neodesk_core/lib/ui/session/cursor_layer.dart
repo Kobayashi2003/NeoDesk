@@ -3,12 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'session_controller.dart';
 
-/// Draws the local virtual cursor at [SessionController.cursorScreen] (computed
-/// from the image-space cursor through the live canvas transform, so it rides
-/// the zoomed/panned image correctly — DESIGN.md §3.1 / §6).
-///
-/// Shown always in Pointer mode; in Touch mode only on the FakeCore demo (the
-/// real peer renders its own cursor). Gated by [SessionController.showLocalCursor].
+/// Draws the FakeCore demo's virtual cursor at [SessionController.cursorScreen].
+/// The real engine paints its own remote cursor; see
+/// [SessionController.showLocalCursor].
 class CursorLayer extends StatelessWidget {
   const CursorLayer({super.key, required this.controller});
 

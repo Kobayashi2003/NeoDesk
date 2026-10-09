@@ -1,4 +1,4 @@
-/// Spacing / radius / sizing scale. See DESIGN.md §2.3.
+/// Spacing / radius / sizing scale.
 class Dimens {
   Dimens._();
 

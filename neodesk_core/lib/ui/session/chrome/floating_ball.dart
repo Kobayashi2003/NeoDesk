@@ -10,7 +10,7 @@ import '../../theme/dimens.dart';
 /// Shown only while the toolbar (chrome) is hidden — **tap** reveals the toolbar,
 /// **drag** moves it. It snaps to the nearest side edge and keeps clear of the
 /// notch, the system bars and the on-screen keyboard, re-snapping itself when the
-/// screen rotates or those insets change. See DESIGN.md §4.5.
+/// screen rotates or those insets change.
 class FloatingBall extends StatefulWidget {
   const FloatingBall({
     super.key,

@@ -26,7 +26,7 @@ import 'key_combo.dart';
 ///
 /// Keys use the engine's `VK_*` names and modifiers are sent as engine flags via
 /// [InputSink.setModifiers] (not as modifier key events) — the only thing the
-/// prebuilt engine actually honours. See DESIGN.md §4.4.
+/// prebuilt engine actually honours.
 class RemoteKeyboard extends StatefulWidget {
   const RemoteKeyboard({
     super.key,

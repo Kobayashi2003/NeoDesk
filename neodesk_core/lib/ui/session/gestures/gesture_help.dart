@@ -85,7 +85,7 @@ const Map<InteractionUiMode, List<_Row>> _help = {
   ],
 };
 
-/// Bottom sheet documenting the gestures for [mode] (DESIGN.md).
+/// Bottom sheet documenting the gestures for [mode].
 void showGestureHelp(BuildContext context, InteractionUiMode mode) {
   final rows = _help[mode] ?? const [];
   showModalBottomSheet(

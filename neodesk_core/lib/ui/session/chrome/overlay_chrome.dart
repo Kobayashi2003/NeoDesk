@@ -10,7 +10,7 @@ import '../session_controller.dart';
 
 /// Top status bar + bottom toolbar, auto-hidden via [SessionController]. Both
 /// bars are SafeArea-insetted (correct under portrait/landscape cutouts) and the
-/// bottom cluster is centred within a max width. See DESIGN.md §4.5.
+/// bottom cluster is centred within a max width.
 class OverlayChrome extends StatelessWidget {
   const OverlayChrome({
     super.key,
@@ -105,7 +105,7 @@ class OverlayChrome extends StatelessWidget {
         ),
       );
 
-  /// Quick zoom controls (§4): a single tap can't toggle zoom (it's a click),
+  /// Quick zoom controls: a single tap can't toggle zoom (it's a click),
   /// so Fit / 100% are exposed as toolbar buttons.
   Widget _zoomButton(IconData icon, String tooltip, VoidCallback onTap) =>
       IconButton(

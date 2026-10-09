@@ -5,7 +5,7 @@ import '../theme/app_typography.dart';
 import '../theme/dimens.dart';
 
 /// Fully-rounded Spotify-style action button. Green fill, black label, with a
-/// subtle press-scale. See DESIGN.md §2.3 / §7.
+/// subtle press-scale.
 class PillButton extends StatefulWidget {
   const PillButton({
     super.key,
