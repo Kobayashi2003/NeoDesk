@@ -51,6 +51,11 @@ class _SettingsPageState extends State<SettingsPage> {
     (label: 'Light', value: 'light', sub: null),
     (label: 'Dark', value: 'dark', sub: null),
   ];
+  static const _orientations = <_Option>[
+    (label: 'Follow system', value: 'system', sub: null),
+    (label: 'Landscape', value: 'landscape', sub: null),
+    (label: 'Portrait', value: 'portrait', sub: null),
+  ];
   // Engine dialog language (the neodesk UI itself stays English).
   static const _languages = <_Option>[
     (label: 'Follow system', value: 'system', sub: null),
@@ -91,6 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
       (v) => '${((v - min) / (max - min) * 100).round()}%';
 
   late InteractionUiMode _mode;
+  late String _orientation;
   late double _pointerGain; // pointer.gainBase
   late double _scrollStep; // scroll.step (smaller = faster)
   late double _maxZoom;
@@ -122,6 +128,8 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _mode = InteractionUiModeX.fromStorage(_cfg.get(ConfigKeys.defaultMode,
         defaultValue: InteractionUiModeX.defaultMode.storageKey));
+    _orientation =
+        _cfg.get(ConfigKeys.sessionOrientation, defaultValue: 'system');
     _pointerGain =
         (double.tryParse(_cfg.get(ConfigKeys.pointerGainBase)) ?? 1.4)
             .clamp(_gainMin, _gainMax);
@@ -358,6 +366,14 @@ class _SettingsPageState extends State<SettingsPage> {
           _subsection('Interaction', [
             _row(Icons.touch_app, 'Default mode',
                 value: _mode.label, onTap: _pickMode),
+            _row(Icons.screen_rotation, 'Screen orientation',
+                value: _labelOf(_orientations, _orientation),
+                onTap: () => _pickOption(
+                    'Screen orientation',
+                    _orientations,
+                    ConfigKeys.sessionOrientation,
+                    _orientation,
+                    (v) => setState(() => _orientation = v))),
             _pageRow(Icons.gesture, 'Customize gestures', () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => GestureSettingsPage(config: _cfg),

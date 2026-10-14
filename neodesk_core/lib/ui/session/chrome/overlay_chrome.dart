@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:neodesk_core/neodesk_core.dart';
 
 import '../../theme/app_colors.dart';
@@ -80,27 +81,51 @@ class OverlayChrome extends StatelessWidget {
           bottom: false,
           minimum: const EdgeInsets.fromLTRB(
               Dimens.s8, Dimens.s4, Dimens.s8, Dimens.s8),
-          child: Row(
-            children: [
-              IconButton(
-                  icon: const Icon(Icons.chevron_left), onPressed: onClose),
-              Expanded(
-                child: Text(peerName,
-                    style: AppTypography.body, overflow: TextOverflow.ellipsis),
-              ),
-              // Quick monitor switcher — only when the peer has >1 display.
-              if ((controller.peer?.displayCount ?? 1) > 1)
-                _zoomButton(Icons.monitor, 'Display',
-                    () => _displaySheet(context, controller.peer!.displayCount)),
-              _zoomButton(Icons.fit_screen, 'Fit', controller.fitCanvas),
-              _zoomButton(
-                  Icons.center_focus_strong, '1:1', controller.nativeCanvas),
-              // Explicitly collapse the toolbar (the floating handle re-shows it).
-              _zoomButton(Icons.keyboard_arrow_up, 'Hide toolbar',
-                  () => controller.setChrome(false)),
-              const SizedBox(width: Dimens.s4),
-              _modeChip(context),
-            ],
+          child: LayoutBuilder(
+            builder: (context, box) => Row(
+              children: [
+                IconButton(
+                    icon: const Icon(Icons.chevron_left), onPressed: onClose),
+                Expanded(
+                  child: Text(peerName,
+                      style: AppTypography.body,
+                      overflow: TextOverflow.ellipsis),
+                ),
+                // The name gives way first; past that (narrow portrait, large
+                // font) the buttons scroll rather than overflow.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: (box.maxWidth - 48).clamp(0.0, box.maxWidth)),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Quick monitor switcher — only when the peer has >1 display.
+                        if ((controller.peer?.displayCount ?? 1) > 1)
+                          _zoomButton(
+                              Icons.monitor,
+                              'Display',
+                              () => _displaySheet(
+                                  context, controller.peer!.displayCount)),
+                        _zoomButton(
+                            Icons.fit_screen, 'Fit', controller.fitCanvas),
+                        _zoomButton(Icons.center_focus_strong, '1:1',
+                            controller.nativeCanvas),
+                        _rotateButton(context),
+                        // Explicitly collapse the toolbar (the floating handle
+                        // re-shows it).
+                        _zoomButton(Icons.keyboard_arrow_up, 'Hide toolbar',
+                            () => controller.setChrome(false)),
+                        const SizedBox(width: Dimens.s4),
+                        _modeChip(context),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -115,6 +140,41 @@ class OverlayChrome extends StatelessWidget {
         color: AppColors.textSecondary,
         onPressed: onTap,
       );
+
+  /// Tap rotates and holds; long-press returns to auto-rotate. Not an
+  /// [IconButton]: its tooltip would claim the long-press.
+  Widget _rotateButton(BuildContext context) {
+    final locked = controller.orientationLocked;
+    return Semantics(
+      button: true,
+      label: tr('Rotate screen'),
+      hint: tr('Hold the rotate button for auto-rotate'),
+      child: InkResponse(
+        radius: 20,
+        onTap: () => controller.rotateScreen(
+            landscape:
+                MediaQuery.of(context).orientation == Orientation.landscape),
+        onLongPress: locked
+            ? () {
+                HapticFeedback.selectionClick();
+                controller.followSystemOrientation();
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(
+                      content: Text(tr('Auto-rotate restored')),
+                      duration: const Duration(milliseconds: 1500)));
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(Dimens.s8),
+          child: Icon(
+              locked ? Icons.screen_lock_rotation : Icons.screen_rotation,
+              size: 20,
+              color: locked ? AppColors.accent : AppColors.textSecondary),
+        ),
+      ),
+    );
+  }
 
   Widget _modeChip(BuildContext context) => GestureDetector(
         onTap: () => _pickMode(context),
@@ -170,19 +230,27 @@ class OverlayChrome extends StatelessWidget {
         ),
       );
 
-  Widget _tool(IconData icon, String label, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Dimens.rChip),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Dimens.s8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: AppColors.textPrimary),
-              const SizedBox(height: 2),
-              Text(tr(label),
-                  style: AppTypography.caption.copyWith(fontSize: 11)),
-            ],
+  /// At most an equal share of the bar; a label too wide for it (narrow screen,
+  /// large font) shrinks instead of overflowing.
+  Widget _tool(IconData icon, String label, VoidCallback onTap) => Flexible(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Dimens.rChip),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.s8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 22, color: AppColors.textPrimary),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(tr(label),
+                      maxLines: 1,
+                      style: AppTypography.caption.copyWith(fontSize: 11)),
+                ),
+              ],
+            ),
           ),
         ),
       );

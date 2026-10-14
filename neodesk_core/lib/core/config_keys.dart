@@ -3,6 +3,10 @@ abstract final class ConfigKeys {
   /// Interaction mode a new session opens in (`touch` / `pointer`).
   static const defaultMode = 'neodesk.mode.default';
 
+  /// Orientation a session starts in (`system` / `landscape` / `portrait`).
+  /// The toolbar's rotate button overrides it for that session.
+  static const sessionOrientation = 'neodesk.session.orientation';
+
   /// Invert the direction of drag-driven scrolling (bool). Buttons that name a
   /// direction, such as a volume key bound to Scroll up, ignore it.
   static const scrollInvert = 'neodesk.scrollinvert';

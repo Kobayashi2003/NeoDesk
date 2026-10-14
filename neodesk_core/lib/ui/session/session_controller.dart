@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:neodesk_core/neodesk_core.dart';
 
@@ -44,6 +45,12 @@ class SessionController extends ChangeNotifier {
     edgePanSpeed = edgePanSpeedFrom(core.config.get(ConfigKeys.edgePanSpeed));
     qualityMonitorDetailed =
         core.config.get(ConfigKeys.qualityMonitorDetail) == 'detailed';
+    switch (core.config.get(ConfigKeys.sessionOrientation)) {
+      case 'landscape':
+        _holdOrientation(landscape: true);
+      case 'portrait':
+        _holdOrientation(landscape: false);
+    }
     _phaseSub = session.phase.listen((p) {
       phase = p;
       if (p == SessionPhase.connected) {
@@ -279,6 +286,35 @@ class SessionController extends ChangeNotifier {
   void setChrome(bool visible) {
     if (chromeVisible == visible) return;
     chromeVisible = visible;
+    notifyListeners();
+  }
+
+  /// Whether this session holds the screen in one orientation, from the
+  /// Screen orientation setting or the rotate button. Released on dispose.
+  bool orientationLocked = false;
+
+  void _holdOrientation({required bool landscape}) {
+    orientationLocked = true;
+    // Either landscape side, so the phone can still be turned over.
+    SystemChrome.setPreferredOrientations(landscape
+        ? const [
+            DeviceOrientation.landscapeLeft,
+            DeviceOrientation.landscapeRight,
+          ]
+        : const [DeviceOrientation.portraitUp]);
+    notifyListeners();
+  }
+
+  /// Switches away from the current orientation ([landscape]) and holds the new
+  /// one, even when system auto-rotate is off. [bindViewport] re-fits.
+  void rotateScreen({required bool landscape}) =>
+      _holdOrientation(landscape: !landscape);
+
+  /// Hands orientation back to the sensor and the system auto-rotate setting.
+  void followSystemOrientation() {
+    if (!orientationLocked) return;
+    orientationLocked = false;
+    SystemChrome.setPreferredOrientations(const []);
     notifyListeners();
   }
 
@@ -784,6 +820,7 @@ class SessionController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (orientationLocked) SystemChrome.setPreferredOrientations(const []);
     _reconnectTimer?.cancel();
     _switchFitSub?.cancel();
     _chromeTimer?.cancel();
